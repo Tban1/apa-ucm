@@ -1,0 +1,28 @@
+# Laravel (dentro de /src)
+src/.env
+src/vendor/
+src/node_modules/
+src/storage/logs/*
+src/storage/framework/cache/*
+src/storage/framework/sessions/*
+src/storage/framework/views/*
+src/public/hot
+src/public/storage
+src/public/build/
+
+# Docker
+docker/db/data/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Variables de entorno locales
+.env
