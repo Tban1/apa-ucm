@@ -1,0 +1,203 @@
+
+<style>
+#erd svg { width: 100%; }
+#erd svg text,
+#erd svg tspan,
+#erd svg .er.attributeBoxEven text,
+#erd svg .er.attributeBoxOdd text,
+#erd svg .er.relationshipLabel text,
+#erd svg .er.entityLabel text {
+  fill: #000000 !important;
+  color: #000000 !important;
+}
+</style>
+<div id="erd"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: false,
+    fontSize: '13px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: '#73726c',
+    textColor: '#000000',
+    primaryColor: '#ffffff',
+    primaryBorderColor: '#b4b2a9',
+    primaryTextColor: '#000000',
+    attributeBackgroundColorEven: '#f1efe8',
+    attributeBackgroundColorOdd: '#ffffff',
+  },
+});
+const { svg } = await mermaid.render('erd-svg', `erDiagram
+  users {
+    uuid id PK
+    string name
+    string email
+    string password
+    string rut
+    string telefono
+    uuid facultad_id FK
+    uuid departamento_id FK
+    string role
+    boolean activo
+    timestamp created_at
+  }
+  facultades {
+    uuid id PK
+    string nombre
+    string codigo
+    timestamp created_at
+  }
+  departamentos {
+    uuid id PK
+    string nombre
+    uuid facultad_id FK
+    timestamp created_at
+  }
+  periodos {
+    uuid id PK
+    int anio
+    string nombre
+    string estado
+    date fecha_inicio
+    date fecha_cierre
+    uuid creado_por FK
+    timestamp created_at
+  }
+  cronogramas {
+    uuid id PK
+    uuid periodo_id FK
+    string etapa
+    date fecha_inicio
+    date fecha_fin
+    timestamp created_at
+  }
+  nominas {
+    uuid id PK
+    uuid periodo_id FK
+    uuid user_id FK
+    string estado
+    boolean con_licencia
+    timestamp created_at
+  }
+  categorias_apa {
+    uuid id PK
+    string nombre
+    string descripcion
+  }
+  evidencias {
+    uuid id PK
+    uuid nomina_id FK
+    uuid categoria_id FK
+    string nombre_archivo
+    string ruta
+    int tamano
+    uuid subido_por FK
+    boolean es_apelacion
+    timestamp created_at
+  }
+  evaluaciones {
+    uuid id PK
+    uuid nomina_id FK
+    uuid evaluador_id FK
+    int puntaje_docencia
+    int puntaje_investigacion
+    int puntaje_vinculacion
+    int puntaje_gestion
+    int puntaje_formacion
+    text comentario
+    timestamp created_at
+  }
+  calificaciones_finales {
+    uuid id PK
+    uuid nomina_id FK
+    int puntaje_total
+    string calificacion
+    uuid determinada_por FK
+    date fecha
+    timestamp created_at
+  }
+  calificaciones_jefatura {
+    uuid id PK
+    uuid nomina_id FK
+    uuid jefe_id FK
+    int puntaje
+    text comentario
+    timestamp created_at
+  }
+  apelaciones {
+    uuid id PK
+    uuid nomina_id FK
+    text motivo
+    string estado
+    date fecha_solicitud
+    date fecha_resolucion
+    timestamp created_at
+  }
+  actas {
+    uuid id PK
+    uuid periodo_id FK
+    uuid facultad_id FK
+    string archivo
+    uuid generada_por FK
+    date fecha
+    timestamp created_at
+  }
+  notificaciones {
+    uuid id PK
+    uuid user_id FK
+    string tipo
+    string titulo
+    text mensaje
+    boolean leida
+    string url
+    timestamp created_at
+  }
+
+  facultades ||--o{ departamentos : tiene
+  facultades ||--o{ users : pertenece
+  departamentos ||--o{ users : pertenece
+  periodos ||--o{ cronogramas : define
+  periodos ||--o{ nominas : incluye
+  periodos ||--o{ actas : genera
+  users ||--o{ nominas : es_evaluado
+  nominas ||--o{ evidencias : contiene
+  nominas ||--o{ evaluaciones : recibe
+  nominas ||--o{ calificaciones_finales : obtiene
+  nominas ||--o{ calificaciones_jefatura : tiene
+  nominas ||--o{ apelaciones : puede_tener
+  categorias_apa ||--o{ evidencias : clasifica
+  users ||--o{ evaluaciones : realiza
+  users ||--o{ notificaciones : recibe
+  facultades ||--o{ actas : asociada
+`);
+document.getElementById('erd').innerHTML = svg;
+
+document.querySelectorAll('#erd svg text, #erd svg tspan').forEach(el => {
+  el.style.fill = '#000000';
+});
+
+document.querySelectorAll('#erd svg .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx', '8');
+  for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+</script>
