@@ -127,6 +127,6 @@ Puedes conectarte con DBeaver, TablePlus o cualquier cliente PostgreSQL.
 
 ## Convenciones del proyecto
 
-- **Ramas:** `main` (producción), `develop` (desarrollo), `feature/nombre-modulo`
+- **Ramas:** `main` (producción), `feature/nombre-modulo`
 - **Commits:** en español, descriptivos. Ej: `feat: agregar módulo de carga de evidencias`
 - **Migraciones:** siempre nombradas con el módulo. Ej: `create_evidencias_table`
