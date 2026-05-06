@@ -10,6 +10,8 @@ class Facultad extends Model
 {
     use HasUuids;
 
+    protected $table = 'facultades';
+
     protected $fillable = ['nombre', 'codigo'];
 
     public function departamentos(): HasMany

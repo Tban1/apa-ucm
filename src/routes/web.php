@@ -1,7 +1,39 @@
 <?php
 
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
+Route::middleware('guest')->group(function () {
+    Route::get('/', fn () => redirect()->route('login'));
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'admin'])->name('admin.dashboard');
+    });
+
+    Route::middleware('role:analista_ccda')->prefix('analista')->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'analista'])->name('analista.dashboard');
+    });
+
+    Route::middleware('role:secretario')->prefix('secretario')->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'secretario'])->name('secretario.dashboard');
+    });
+
+    Route::middleware('role:miembro_cca')->prefix('cca')->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'cca'])->name('cca.dashboard');
+    });
+
+    Route::middleware('role:jefe_academico')->prefix('jefe')->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'jefe'])->name('jefe.dashboard');
+    });
+
+    Route::middleware('role:academico')->prefix('academico')->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'academico'])->name('academico.dashboard');
+    });
 });

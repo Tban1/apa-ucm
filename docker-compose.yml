@@ -78,6 +78,22 @@ services:
     networks:
       - apa_network
 
+  # ─── Vite Dev Server (HMR) ──────────────────────────────────────────────────
+  vite:
+    image: apa-ucm-app
+    container_name: apa_vite
+    restart: unless-stopped
+    working_dir: /var/www
+    command: npm run dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./src:/var/www
+    networks:
+      - apa_network
+    depends_on:
+      - app
+
   # ─── Queue Worker (Laravel) ─────────────────────────────────────────────────
   queue:
     image: apa-ucm-app

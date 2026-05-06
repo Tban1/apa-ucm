@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 
 createInertiaApp({
-    title: (title) => `${title} - Sistema APA UCM`,
+    title: (title) => `${title} - Sistema de Gestión de Calificaciones Académicas`,
     resolve: (name) =>
         resolvePageComponent(
             `./Pages/${name}.jsx`,
