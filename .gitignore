@@ -18,6 +18,7 @@ docker/db/data/
 Thumbs.db
 *.swp
 *.swo
+*Zone.Identifier
 
 # IDE
 .idea/
