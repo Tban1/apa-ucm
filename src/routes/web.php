@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NominaController;
 use App\Http\Controllers\PeriodoController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,6 +24,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/periodos',       [PeriodoController::class, 'index'])->name('analista.periodos.index');
         Route::get('/periodos/crear', [PeriodoController::class, 'create'])->name('analista.periodos.create');
         Route::post('/periodos',      [PeriodoController::class, 'store'])->name('analista.periodos.store');
+
+        Route::get('/periodos/{periodo}/nominas/crear', [NominaController::class, 'create'])->name('analista.periodos.nominas.create');
+        Route::post('/periodos/{periodo}/nominas',      [NominaController::class, 'store'])->name('analista.periodos.nominas.store');
     });
 
     Route::middleware('role:secretario')->prefix('secretario')->group(function () {

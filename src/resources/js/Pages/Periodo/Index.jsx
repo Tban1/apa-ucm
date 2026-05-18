@@ -10,8 +10,7 @@ const ESTADO_BADGE = {
 
 function formatDate(dateStr) {
     if (!dateStr) return '—';
-    const part = dateStr.split('T')[0];
-    const [y, m, d] = part.split('-');
+    const [y, m, d] = dateStr.split('T')[0].split('-');
     return `${d}/${m}/${y}`;
 }
 
@@ -41,10 +40,8 @@ export default function PeriodoIndex({ periodos }) {
                 {periodos.length === 0 ? (
                     <div className="bg-white rounded-xl border border-dashed border-gray-300 p-10 text-center">
                         <p className="text-gray-400 text-sm">No hay períodos registrados.</p>
-                        <Link
-                            href="/analista/periodos/crear"
-                            className="mt-3 inline-block text-[#0096D6] text-sm hover:underline"
-                        >
+                        <Link href="/analista/periodos/crear"
+                            className="mt-3 inline-block text-[#0096D6] text-sm hover:underline">
                             Registrar el primer período
                         </Link>
                     </div>
@@ -59,6 +56,7 @@ export default function PeriodoIndex({ periodos }) {
                                     <th className="text-left px-5 py-3 font-semibold text-gray-600">Inicio</th>
                                     <th className="text-left px-5 py-3 font-semibold text-gray-600">Cierre</th>
                                     <th className="text-left px-5 py-3 font-semibold text-gray-600">Académicos</th>
+                                    <th className="text-left px-5 py-3 font-semibold text-gray-600">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -76,6 +74,14 @@ export default function PeriodoIndex({ periodos }) {
                                             <td className="px-5 py-3 text-gray-600">{formatDate(p.fecha_inicio)}</td>
                                             <td className="px-5 py-3 text-gray-600">{formatDate(p.fecha_cierre)}</td>
                                             <td className="px-5 py-3 text-gray-600">{p.nominas_count ?? 0}</td>
+                                            <td className="px-5 py-3">
+                                                <Link
+                                                    href={`/analista/periodos/${p.id}/nominas/crear`}
+                                                    className="text-xs font-medium text-[#0096D6] hover:underline"
+                                                >
+                                                    Gestionar nómina
+                                                </Link>
+                                            </td>
                                         </tr>
                                     );
                                 })}
