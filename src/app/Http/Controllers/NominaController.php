@@ -7,6 +7,7 @@ use App\Models\Facultad;
 use App\Models\Nomina;
 use App\Models\Periodo;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -24,15 +25,14 @@ class NominaController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'rut', 'facultad_id']);
 
-        $yaEnNomina = Nomina::where('periodo_id', $periodo->id)
-            ->pluck('user_id')
-            ->all();
+        $nominasEnPeriodo = Nomina::where('periodo_id', $periodo->id)
+            ->get(['id', 'user_id', 'estado', 'con_licencia', 'observacion_licencia', 'updated_at']);
 
         return Inertia::render('Nomina/Create', [
-            'periodo'    => $periodo->only(['id', 'anio', 'nombre', 'estado']),
-            'facultades' => $facultades,
-            'academicos' => $academicos,
-            'yaEnNomina' => $yaEnNomina,
+            'periodo'          => $periodo->only(['id', 'anio', 'nombre', 'estado']),
+            'facultades'       => $facultades,
+            'academicos'       => $academicos,
+            'nominasEnPeriodo' => $nominasEnPeriodo,
         ]);
     }
 
@@ -75,5 +75,26 @@ class NominaController extends Controller
         return redirect()
             ->route('analista.periodos.nominas.create', $periodo->id)
             ->with('success', $msg);
+    }
+
+    public function toggleLicencia(Request $request, Nomina $nomina)
+    {
+        $data = $request->validate([
+            'con_licencia'         => ['required', 'boolean'],
+            'observacion_licencia' => ['nullable', 'string', 'max:500', 'required_if:con_licencia,true'],
+        ], [
+            'observacion_licencia.required_if' => 'El motivo del caso especial es obligatorio.',
+        ]);
+
+        $nomina->update([
+            'con_licencia'         => $data['con_licencia'],
+            'observacion_licencia' => $data['con_licencia'] ? $data['observacion_licencia'] : null,
+        ]);
+
+        $msg = $data['con_licencia']
+            ? 'Caso especial registrado correctamente.'
+            : 'Caso especial removido.';
+
+        return back()->with('success', $msg);
     }
 }

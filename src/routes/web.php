@@ -27,6 +27,8 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/periodos/{periodo}/nominas/crear', [NominaController::class, 'create'])->name('analista.periodos.nominas.create');
         Route::post('/periodos/{periodo}/nominas',      [NominaController::class, 'store'])->name('analista.periodos.nominas.store');
+
+        Route::patch('/nominas/{nomina}/licencia', [NominaController::class, 'toggleLicencia'])->name('analista.nominas.licencia');
     });
 
     Route::middleware('role:secretario')->prefix('secretario')->group(function () {
