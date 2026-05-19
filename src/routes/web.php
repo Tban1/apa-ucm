@@ -39,6 +39,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/expedientes/{nomina}',               [SecretarioController::class, 'showExpediente'])->name('secretario.expedientes.show');
         Route::patch('/expedientes/{nomina}/validar',     [SecretarioController::class, 'validarExpediente'])->name('secretario.expedientes.validar');
         Route::post('/plazos',                            [SecretarioController::class, 'storePlazo'])->name('secretario.plazos.store');
+        Route::post('/cierre',                            [SecretarioController::class, 'cerrarRecepcion'])->name('secretario.cierre');
     });
 
     Route::middleware('role:miembro_cca')->prefix('cca')->group(function () {

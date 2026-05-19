@@ -37,13 +37,17 @@ class EvidenciaController extends Controller
                 $plazo = [
                     'fecha_limite' => $plazoModel->fecha_limite->format('Y-m-d'),
                     'vigente'      => $plazoModel->estaVigente(),
+                    'cerrado'      => $plazoModel->estaCerradoFormalmente(),
+                    'cerrado_en'   => $plazoModel->cerrado_en?->format('d/m/Y H:i'),
                 ];
             }
         }
 
-        // Puede cargar si: tiene nómina activa + plazo vigente (o sin plazo configurado, o con licencia)
+        // Puede cargar si: tiene nómina activa + sin cierre formal + plazo vigente (o sin plazo, o con licencia)
+        $cerradoFormalmente = $plazo['cerrado'] ?? false;
         $puedeCargar = $nomina
             && $nomina->puedeCargarEvidencias()
+            && !$cerradoFormalmente
             && ($plazo === null || $plazo['vigente'] || $nomina->con_licencia);
 
         $evidenciasPorCategoria = [];
@@ -99,14 +103,16 @@ class EvidenciaController extends Controller
             return back()->with('error', 'Su expediente no permite carga de evidencias en este momento.');
         }
 
-        if (!$nomina->con_licencia) {
-            $plazo = PlazoFacultad::where('periodo_id', $periodo->id)
-                ->where('facultad_id', $user->facultad_id)
-                ->first();
+        $plazoRecord = PlazoFacultad::where('periodo_id', $periodo->id)
+            ->where('facultad_id', $user->facultad_id)
+            ->first();
 
-            if ($plazo && !$plazo->estaVigente()) {
-                return back()->with('error', 'El plazo de carga de evidencias ha vencido.');
-            }
+        if ($plazoRecord?->estaCerradoFormalmente()) {
+            return back()->with('error', 'La recepción de evidencias fue cerrada formalmente. No se aceptan nuevas cargas.');
+        }
+
+        if (!$nomina->con_licencia && $plazoRecord && !$plazoRecord->estaVigente()) {
+            return back()->with('error', 'El plazo de carga de evidencias ha vencido.');
         }
 
         $data = $request->validate([

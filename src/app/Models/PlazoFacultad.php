@@ -11,11 +11,14 @@ class PlazoFacultad extends Model
     use HasUuids;
 
     protected $table    = 'plazos_facultad';
-    protected $fillable = ['periodo_id', 'facultad_id', 'fecha_limite', 'creado_por'];
+    protected $fillable = ['periodo_id', 'facultad_id', 'fecha_limite', 'creado_por', 'cerrado_en', 'cerrado_por'];
 
     protected function casts(): array
     {
-        return ['fecha_limite' => 'date'];
+        return [
+            'fecha_limite' => 'date',
+            'cerrado_en'   => 'datetime',
+        ];
     }
 
     public function estaVigente(): bool
@@ -23,7 +26,13 @@ class PlazoFacultad extends Model
         return now()->toDateString() <= $this->fecha_limite->toDateString();
     }
 
+    public function estaCerradoFormalmente(): bool
+    {
+        return $this->cerrado_en !== null;
+    }
+
     public function periodo(): BelongsTo   { return $this->belongsTo(Periodo::class); }
     public function facultad(): BelongsTo  { return $this->belongsTo(Facultad::class); }
     public function creadoPor(): BelongsTo { return $this->belongsTo(User::class, 'creado_por'); }
+    public function cerradoPor(): BelongsTo { return $this->belongsTo(User::class, 'cerrado_por'); }
 }

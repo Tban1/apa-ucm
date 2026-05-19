@@ -76,12 +76,19 @@ function EstadoBanner({ periodo, nomina, plazo, puedeCargar }) {
             {plazo && (
                 <div className="border-l border-gray-200 pl-6">
                     <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">Plazo de carga</p>
-                    <p className={`font-semibold text-sm ${plazo.vigente ? 'text-green-700' : 'text-red-700'}`}>
-                        {plazo.fecha_limite}
-                        <span className="ml-1.5 font-normal text-xs opacity-80">
-                            ({plazo.vigente ? 'vigente' : 'vencido'})
-                        </span>
-                    </p>
+                    {plazo.cerrado ? (
+                        <p className="font-semibold text-sm text-red-700">
+                            Recepción cerrada
+                            <span className="ml-1.5 font-normal text-xs opacity-80">({plazo.cerrado_en})</span>
+                        </p>
+                    ) : (
+                        <p className={`font-semibold text-sm ${plazo.vigente ? 'text-green-700' : 'text-red-700'}`}>
+                            {plazo.fecha_limite}
+                            <span className="ml-1.5 font-normal text-xs opacity-80">
+                                ({plazo.vigente ? 'vigente' : 'vencido'})
+                            </span>
+                        </p>
+                    )}
                 </div>
             )}
 

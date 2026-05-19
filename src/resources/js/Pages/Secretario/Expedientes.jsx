@@ -33,9 +33,10 @@ export default function Expedientes({ periodo, expedientes, plazo }) {
     const { flash, auth } = usePage().props;
     const facultad = auth.user.facultad?.nombre ?? '—';
 
-    const [search,       setSearch]       = useState('');
-    const [filtroEstado, setFiltroEstado] = useState('');
-    const [editingPlazo, setEditingPlazo] = useState(false);
+    const [search,          setSearch]          = useState('');
+    const [filtroEstado,    setFiltroEstado]    = useState('');
+    const [editingPlazo,    setEditingPlazo]    = useState(false);
+    const [confirmCierre,   setConfirmCierre]   = useState(false);
 
     const plazoForm = useForm({ fecha_limite: plazo?.fecha_limite ?? '' });
 
@@ -66,6 +67,13 @@ export default function Expedientes({ periodo, expedientes, plazo }) {
     function cancelPlazo() {
         plazoForm.setData('fecha_limite', plazo?.fecha_limite ?? '');
         setEditingPlazo(false);
+    }
+
+    function ejecutarCierre() {
+        router.post('/secretario/cierre', {}, {
+            preserveScroll: true,
+            onSuccess: () => setConfirmCierre(false),
+        });
     }
 
     function refresh() {
@@ -198,6 +206,54 @@ export default function Expedientes({ periodo, expedientes, plazo }) {
                     )}
                 </div>
 
+                {/* ── Cierre formal ───────────────────────────── */}
+                {periodo && (
+                    plazo?.cerrado ? (
+                        <div className="bg-red-50 border border-red-200 rounded-xl p-5 mb-6 flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-semibold text-red-800">Recepción cerrada formalmente</p>
+                                <p className="text-xs text-red-600 mt-0.5">
+                                    Cerrada el {plazo.cerrado_en}. No se aceptan nuevas cargas de evidencias.
+                                </p>
+                            </div>
+                            <LockIcon />
+                        </div>
+                    ) : (
+                        <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6 flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-semibold text-gray-800">Cierre formal de recepción</p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    Cierra todos los expedientes activos y bloquea nuevas cargas de evidencias.
+                                </p>
+                            </div>
+                            {!confirmCierre ? (
+                                <button
+                                    onClick={() => setConfirmCierre(true)}
+                                    className="ml-4 shrink-0 px-4 py-2 border border-red-300 text-red-700 text-sm font-medium rounded-lg hover:bg-red-50 transition-colors"
+                                >
+                                    Cerrar recepción
+                                </button>
+                            ) : (
+                                <div className="ml-4 shrink-0 flex items-center gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-2">
+                                    <p className="text-xs text-red-700 font-medium">¿Confirmar cierre? Esta acción no se puede deshacer.</p>
+                                    <button
+                                        onClick={ejecutarCierre}
+                                        className="px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-colors"
+                                    >
+                                        Confirmar
+                                    </button>
+                                    <button
+                                        onClick={() => setConfirmCierre(false)}
+                                        className="text-xs text-gray-500 hover:text-gray-700"
+                                    >
+                                        Cancelar
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )
+                )}
+
                 {/* Stats */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                     <StatCard label="Total"       value={total}      active={!filtroEstado}                    onClick={() => setFiltroEstado('')} />
@@ -329,6 +385,15 @@ function RefreshIcon() {
     return (
         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+    );
+}
+
+function LockIcon() {
+    return (
+        <svg className="w-6 h-6 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
         </svg>
     );
 }

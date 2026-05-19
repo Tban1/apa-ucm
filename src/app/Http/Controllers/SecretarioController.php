@@ -46,6 +46,8 @@ class SecretarioController extends Controller
                     'fecha_limite' => $plazoModel->fecha_limite->format('Y-m-d'),
                     'vigente'      => $plazoModel->estaVigente(),
                     'actualizado'  => $plazoModel->updated_at->format('d/m/Y'),
+                    'cerrado'      => $plazoModel->estaCerradoFormalmente(),
+                    'cerrado_en'   => $plazoModel->cerrado_en?->format('d/m/Y H:i'),
                 ];
             }
         }
@@ -132,6 +134,37 @@ class SecretarioController extends Controller
 
         $nomina->update(['observacion_secretario' => $data['observacion'] ?? null]);
         return back()->with('success', 'Observaciones registradas en el expediente.');
+    }
+
+    public function cerrarRecepcion()
+    {
+        $user    = auth()->user();
+        $periodo = Periodo::where('estado', 'activo')->latest()->first();
+
+        if (!$periodo || !$user->facultad_id) {
+            return back()->with('error', 'No hay un período activo configurado.');
+        }
+
+        $plazo = PlazoFacultad::firstOrCreate(
+            ['periodo_id' => $periodo->id, 'facultad_id' => $user->facultad_id],
+            ['creado_por' => $user->id, 'fecha_limite' => now()->toDateString()]
+        );
+
+        if ($plazo->estaCerradoFormalmente()) {
+            return back()->with('error', 'La recepción ya fue cerrada formalmente.');
+        }
+
+        $plazo->update([
+            'cerrado_en'  => now(),
+            'cerrado_por' => $user->id,
+        ]);
+
+        Nomina::where('periodo_id', $periodo->id)
+            ->whereHas('academico', fn ($q) => $q->where('facultad_id', $user->facultad_id))
+            ->whereIn('estado', ['pendiente', 'en_carga'])
+            ->update(['estado' => 'carga_cerrada']);
+
+        return back()->with('success', 'Recepción de evidencias cerrada formalmente. Todos los expedientes activos han sido cerrados.');
     }
 
     public function storePlazo(Request $request)
