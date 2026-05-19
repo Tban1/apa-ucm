@@ -35,6 +35,15 @@ export default function Evidencias({ periodo, nomina, plazo, puedeCargar, catego
                     </div>
                 )}
 
+                {nomina?.observacion_secretario && (
+                    <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                        <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">
+                            Observaciones del secretario
+                        </p>
+                        <p className="text-sm text-amber-800">{nomina.observacion_secretario}</p>
+                    </div>
+                )}
+
                 {nomina && (
                     <div className="space-y-4">
                         {categorias.map(cat => (
@@ -43,6 +52,7 @@ export default function Evidencias({ periodo, nomina, plazo, puedeCargar, catego
                                 categoria={cat}
                                 evidencias={evidenciasPorCategoria[cat.id] ?? []}
                                 puedeCargar={puedeCargar}
+                                tieneObservaciones={!!nomina.observacion_secretario}
                             />
                         ))}
                     </div>
@@ -120,7 +130,7 @@ function EstadoBanner({ periodo, nomina, plazo, puedeCargar }) {
     );
 }
 
-function CategoriaCard({ categoria, evidencias, puedeCargar }) {
+function CategoriaCard({ categoria, evidencias, puedeCargar, tieneObservaciones }) {
     const fileRef = useRef(null);
     const { data, setData, post, processing, errors, reset } = useForm({
         categoria_id: categoria.id,
@@ -154,9 +164,24 @@ function CategoriaCard({ categoria, evidencias, puedeCargar }) {
                         <p className="text-xs text-gray-500 mt-0.5">{categoria.descripcion}</p>
                     )}
                 </div>
-                <span className="text-xs text-gray-500 bg-white border border-gray-200 px-2.5 py-1 rounded-full">
-                    {evidencias.length} {evidencias.length === 1 ? 'archivo' : 'archivos'}
-                </span>
+                <div className="flex items-center gap-2">
+                    {evidencias.length === 0 ? (
+                        <span className="text-xs font-medium bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full">
+                            Pendiente
+                        </span>
+                    ) : tieneObservaciones ? (
+                        <span className="text-xs font-medium bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full">
+                            Observada
+                        </span>
+                    ) : (
+                        <span className="text-xs font-medium bg-green-100 text-green-700 px-2.5 py-1 rounded-full">
+                            Entregada
+                        </span>
+                    )}
+                    <span className="text-xs text-gray-400 bg-white border border-gray-200 px-2 py-0.5 rounded-full">
+                        {evidencias.length} {evidencias.length === 1 ? 'archivo' : 'archivos'}
+                    </span>
+                </div>
             </div>
 
             <div className="px-5 py-4">
@@ -177,15 +202,25 @@ function CategoriaCard({ categoria, evidencias, puedeCargar }) {
                                         </p>
                                     </div>
                                 </div>
-                                {puedeCargar && (
-                                    <button
-                                        onClick={() => eliminar(ev.id)}
-                                        className="ml-3 text-red-400 hover:text-red-600 shrink-0 transition-colors"
-                                        title="Eliminar evidencia"
+                                <div className="ml-3 flex items-center gap-2 shrink-0">
+                                    <a
+                                        href={ev.url_descarga}
+                                        className="text-[#0096D6] hover:text-[#007ab5] transition-colors"
+                                        title="Descargar archivo"
+                                        download
                                     >
-                                        <TrashIcon />
-                                    </button>
-                                )}
+                                        <DownloadIcon />
+                                    </a>
+                                    {puedeCargar && (
+                                        <button
+                                            onClick={() => eliminar(ev.id)}
+                                            className="text-red-400 hover:text-red-600 transition-colors"
+                                            title="Eliminar evidencia"
+                                        >
+                                            <TrashIcon />
+                                        </button>
+                                    )}
+                                </div>
                             </li>
                         ))}
                     </ul>
@@ -239,6 +274,15 @@ function FileIcon() {
         <svg className="w-4 h-4 text-[#0096D6] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                 d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+        </svg>
+    );
+}
+
+function DownloadIcon() {
+    return (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
         </svg>
     );
 }

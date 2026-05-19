@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EvidenciaController extends Controller
 {
@@ -59,6 +60,7 @@ class EvidenciaController extends Controller
                     'tamano'         => $ev->tamanoFormateado(),
                     'descripcion'    => $ev->descripcion,
                     'created_at'     => $ev->created_at->format('d/m/Y H:i'),
+                    'url_descarga'   => route('academico.evidencias.download', $ev->id),
                 ];
             }
         }
@@ -66,9 +68,10 @@ class EvidenciaController extends Controller
         return Inertia::render('Academico/Evidencias', [
             'periodo'                => $periodo?->only(['id', 'anio', 'nombre']),
             'nomina'                 => $nomina ? [
-                'id'          => $nomina->id,
-                'estado'      => $nomina->estado,
-                'con_licencia' => $nomina->con_licencia,
+                'id'                     => $nomina->id,
+                'estado'                 => $nomina->estado,
+                'con_licencia'           => $nomina->con_licencia,
+                'observacion_secretario' => $nomina->observacion_secretario,
             ] : null,
             'plazo'                  => $plazo,
             'puedeCargar'            => $puedeCargar,
@@ -147,6 +150,21 @@ class EvidenciaController extends Controller
         }
 
         return back()->with('success', 'Evidencia cargada correctamente.');
+    }
+
+    public function download(Evidencia $evidencia): StreamedResponse
+    {
+        $user = auth()->user();
+
+        if ($evidencia->nomina->user_id !== $user->id) {
+            abort(403);
+        }
+
+        if (!Storage::disk('public')->exists($evidencia->ruta)) {
+            abort(404);
+        }
+
+        return Storage::disk('public')->download($evidencia->ruta, $evidencia->nombre_archivo);
     }
 
     public function destroy(Evidencia $evidencia)

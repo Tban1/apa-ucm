@@ -52,8 +52,9 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:academico')->prefix('academico')->group(function () {
         Route::get('/dashboard',  [DashboardController::class,  'academico'])->name('academico.dashboard');
-        Route::get('/evidencias', [EvidenciaController::class,  'index'])->name('academico.evidencias');
-        Route::post('/evidencias', [EvidenciaController::class, 'store'])->name('academico.evidencias.store');
-        Route::delete('/evidencias/{evidencia}', [EvidenciaController::class, 'destroy'])->name('academico.evidencias.destroy');
+        Route::get('/evidencias',                          [EvidenciaController::class, 'index'])->name('academico.evidencias');
+        Route::post('/evidencias',                         [EvidenciaController::class, 'store'])->name('academico.evidencias.store');
+        Route::get('/evidencias/{evidencia}/descargar',    [EvidenciaController::class, 'download'])->name('academico.evidencias.download');
+        Route::delete('/evidencias/{evidencia}',           [EvidenciaController::class, 'destroy'])->name('academico.evidencias.destroy');
     });
 });
