@@ -63,6 +63,28 @@ class DashboardController extends Controller
 
     public function academico(): Response
     {
-        return Inertia::render('Dashboard/Academico');
+        $user    = auth()->user();
+        $periodo = Periodo::where('estado', 'activo')->latest()->first();
+
+        $stats = ['evidencias_cargadas' => 0, 'estado_nomina' => null];
+
+        if ($periodo) {
+            $nomina = Nomina::with('evidenciasNormales')
+                ->where('periodo_id', $periodo->id)
+                ->where('user_id', $user->id)
+                ->first();
+
+            if ($nomina) {
+                $stats = [
+                    'evidencias_cargadas' => $nomina->evidenciasNormales->count(),
+                    'estado_nomina'       => $nomina->estado,
+                ];
+            }
+        }
+
+        return Inertia::render('Dashboard/Academico', [
+            'stats'   => $stats,
+            'periodo' => $periodo?->only(['nombre', 'anio']),
+        ]);
     }
 }

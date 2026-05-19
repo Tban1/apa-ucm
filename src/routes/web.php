@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EvidenciaController;
 use App\Http\Controllers\NominaController;
 use App\Http\Controllers\PeriodoController;
 use App\Http\Controllers\SecretarioController;
@@ -47,6 +48,9 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('role:academico')->prefix('academico')->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'academico'])->name('academico.dashboard');
+        Route::get('/dashboard',  [DashboardController::class,  'academico'])->name('academico.dashboard');
+        Route::get('/evidencias', [EvidenciaController::class,  'index'])->name('academico.evidencias');
+        Route::post('/evidencias', [EvidenciaController::class, 'store'])->name('academico.evidencias.store');
+        Route::delete('/evidencias/{evidencia}', [EvidenciaController::class, 'destroy'])->name('academico.evidencias.destroy');
     });
 });
