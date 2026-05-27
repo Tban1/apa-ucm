@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EvaluacionController;
 use App\Http\Controllers\EvidenciaController;
+use App\Http\Controllers\JefaturaController;
 use App\Http\Controllers\NominaController;
 use App\Http\Controllers\PeriodoController;
 use App\Http\Controllers\SecretarioController;
@@ -58,7 +59,11 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('role:jefe_academico')->prefix('jefe')->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'jefe'])->name('jefe.dashboard');
+        Route::get('/dashboard',                    [DashboardController::class, 'jefe'])->name('jefe.dashboard');
+        Route::get('/academicos',                   [JefaturaController::class,  'index'])->name('jefe.academicos');
+        Route::get('/academicos/{nomina}',          [JefaturaController::class,  'show'])->name('jefe.academicos.show');
+        Route::post('/academicos/{nomina}/informe', [JefaturaController::class,  'store'])->name('jefe.academicos.store');
+        Route::get('/academicos/{nomina}/imprimir', [JefaturaController::class,  'imprimir'])->name('jefe.academicos.imprimir');
     });
 
     Route::middleware('role:academico')->prefix('academico')->group(function () {

@@ -79,7 +79,33 @@ class DashboardController extends Controller
 
     public function jefe(): Response
     {
-        return Inertia::render('Dashboard/JefeAcademico');
+        $user    = auth()->user();
+        $periodo = Periodo::where('estado', 'activo')->latest()->first();
+
+        $stats = ['pendientes' => 0, 'emitidas' => 0];
+
+        if ($periodo && $user->facultad_id) {
+            $nominas = Nomina::with('calificacionJefatura')
+                ->where('periodo_id', $periodo->id)
+                ->whereHas('academico', function ($q) use ($user) {
+                    $q->where('facultad_id', $user->facultad_id);
+                    if ($user->departamento_id) {
+                        $q->where('departamento_id', $user->departamento_id);
+                    }
+                })
+                ->whereIn('estado', ['evaluado', 'apelado', 'cerrado'])
+                ->get();
+
+            $stats = [
+                'pendientes' => $nominas->filter(fn ($n) => $n->calificacionJefatura === null)->count(),
+                'emitidas'   => $nominas->filter(fn ($n) => $n->calificacionJefatura !== null)->count(),
+            ];
+        }
+
+        return Inertia::render('Dashboard/JefeAcademico', [
+            'stats'   => $stats,
+            'periodo' => $periodo?->only(['nombre', 'anio']),
+        ]);
     }
 
     public function academico(): Response

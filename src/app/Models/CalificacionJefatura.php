@@ -14,6 +14,35 @@ class CalificacionJefatura extends Model
 
     protected $fillable = ['nomina_id', 'jefe_id', 'puntaje', 'comentario'];
 
+    public function observaciones(): array
+    {
+        if (!$this->comentario) {
+            return [];
+        }
+        $decoded = json_decode($this->comentario, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    public function observacionPorCategoria(string $slug): string
+    {
+        return $this->observaciones()[$slug] ?? '';
+    }
+
+    public function observacionGeneral(): string
+    {
+        return $this->observaciones()['observacion_general'] ?? '';
+    }
+
+    public function calificacionLabel(): string
+    {
+        return match(true) {
+            $this->puntaje >= 80 => 'Muy Bueno',
+            $this->puntaje >= 60 => 'Bueno',
+            $this->puntaje >= 40 => 'Aceptable',
+            default              => 'Deficiente',
+        };
+    }
+
     public function nomina(): BelongsTo
     {
         return $this->belongsTo(Nomina::class);

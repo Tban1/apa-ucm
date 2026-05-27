@@ -26,7 +26,8 @@ const navByRole = {
         { label: 'Expedientes', href: '/cca/expedientes', icon: 'folder' },
     ],
     jefe_academico: [
-        { label: 'Dashboard', href: '/jefe/dashboard', icon: 'grid' },
+        { label: 'Dashboard',  href: '/jefe/dashboard',  icon: 'grid' },
+        { label: 'Académicos', href: '/jefe/academicos', icon: 'folder' },
     ],
     academico: [
         { label: 'Dashboard',  href: '/academico/dashboard',  icon: 'grid' },
