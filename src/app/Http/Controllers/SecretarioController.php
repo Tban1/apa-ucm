@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\CategoriaApa;
+use App\Models\Evidencia;
 use App\Models\Nomina;
 use App\Models\Periodo;
 use App\Models\PlazoFacultad;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SecretarioController extends Controller
 {
@@ -78,6 +81,7 @@ class SecretarioController extends Controller
                 'tamano'         => $ev->tamanoFormateado(),
                 'descripcion'    => $ev->descripcion,
                 'created_at'     => $ev->created_at->format('d/m/Y H:i'),
+                'url_descarga'   => route('secretario.evidencias.download', [$nomina->id, $ev->id]),
             ];
         }
 
@@ -165,6 +169,25 @@ class SecretarioController extends Controller
             ->update(['estado' => 'carga_cerrada']);
 
         return back()->with('success', 'Recepción de evidencias cerrada formalmente. Todos los expedientes activos han sido cerrados.');
+    }
+
+    public function downloadEvidencia(Nomina $nomina, Evidencia $evidencia): StreamedResponse
+    {
+        $user = auth()->user();
+
+        if ($nomina->academico->facultad_id !== $user->facultad_id) {
+            abort(403);
+        }
+
+        if ($evidencia->nomina_id !== $nomina->id) {
+            abort(404);
+        }
+
+        if (!Storage::disk('public')->exists($evidencia->ruta)) {
+            abort(404);
+        }
+
+        return Storage::disk('public')->download($evidencia->ruta, $evidencia->nombre_archivo);
     }
 
     public function storePlazo(Request $request)

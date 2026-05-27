@@ -35,11 +35,12 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:secretario')->prefix('secretario')->group(function () {
         Route::get('/dashboard',                          [DashboardController::class,  'secretario'])->name('secretario.dashboard');
-        Route::get('/expedientes',                        [SecretarioController::class, 'expedientes'])->name('secretario.expedientes');
-        Route::get('/expedientes/{nomina}',               [SecretarioController::class, 'showExpediente'])->name('secretario.expedientes.show');
-        Route::patch('/expedientes/{nomina}/validar',     [SecretarioController::class, 'validarExpediente'])->name('secretario.expedientes.validar');
-        Route::post('/plazos',                            [SecretarioController::class, 'storePlazo'])->name('secretario.plazos.store');
-        Route::post('/cierre',                            [SecretarioController::class, 'cerrarRecepcion'])->name('secretario.cierre');
+        Route::get('/expedientes',                                              [SecretarioController::class, 'expedientes'])->name('secretario.expedientes');
+        Route::get('/expedientes/{nomina}',                                     [SecretarioController::class, 'showExpediente'])->name('secretario.expedientes.show');
+        Route::patch('/expedientes/{nomina}/validar',                           [SecretarioController::class, 'validarExpediente'])->name('secretario.expedientes.validar');
+        Route::get('/expedientes/{nomina}/evidencias/{evidencia}/descargar',    [SecretarioController::class, 'downloadEvidencia'])->name('secretario.evidencias.download');
+        Route::post('/plazos',                                                  [SecretarioController::class, 'storePlazo'])->name('secretario.plazos.store');
+        Route::post('/cierre',                                                  [SecretarioController::class, 'cerrarRecepcion'])->name('secretario.cierre');
     });
 
     Route::middleware('role:miembro_cca')->prefix('cca')->group(function () {

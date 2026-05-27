@@ -108,13 +108,19 @@ export default function ExpedienteDetalle({ nomina, categorias, evidenciasPorCat
                                             {archivos.map(ev => (
                                                 <li key={ev.id} className="flex items-center gap-2.5 py-1.5 text-sm">
                                                     <FileIcon />
-                                                    <div className="min-w-0">
+                                                    <div className="min-w-0 flex-1">
                                                         <p className="text-gray-800 font-medium truncate">{ev.nombre_archivo}</p>
                                                         <p className="text-xs text-gray-400">
                                                             {ev.tamano} · {ev.created_at}
                                                             {ev.descripcion && ` · ${ev.descripcion}`}
                                                         </p>
                                                     </div>
+                                                    <a
+                                                        href={ev.url_descarga}
+                                                        className="shrink-0 text-xs text-[#0096D6] hover:underline flex items-center gap-1"
+                                                    >
+                                                        <DownloadIcon /> Descargar
+                                                    </a>
                                                 </li>
                                             ))}
                                         </ul>
@@ -236,6 +242,14 @@ function BackIcon() {
     return (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+        </svg>
+    );
+}
+
+function DownloadIcon() {
+    return (
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
         </svg>
     );
 }
