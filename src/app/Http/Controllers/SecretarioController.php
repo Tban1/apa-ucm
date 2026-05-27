@@ -105,7 +105,28 @@ class SecretarioController extends Controller
             ]),
             'evidenciasPorCategoria' => $evidenciasPorCategoria,
             'totalEvidencias'        => $evidencias->count(),
+            'apelacion'              => $this->formatApelacion($nomina),
+            'calificacionFinal'      => $nomina->calificacionFinal ? [
+                'puntaje_total' => $nomina->calificacionFinal->puntaje_total,
+                'calificacion'  => $nomina->calificacionFinal->calificacion,
+            ] : null,
         ]);
+    }
+
+    private function formatApelacion(Nomina $nomina): ?array
+    {
+        $ap = $nomina->apelacion;
+        if (!$ap) {
+            return null;
+        }
+        return [
+            'id'               => $ap->id,
+            'estado'           => $ap->estado,
+            'motivo'           => $ap->motivo,
+            'resolucion'       => $ap->resolucion,
+            'fecha_solicitud'  => $ap->fecha_solicitud->format('d/m/Y'),
+            'fecha_resolucion' => $ap->fecha_resolucion?->format('d/m/Y'),
+        ];
     }
 
     public function validarExpediente(Request $request, Nomina $nomina)

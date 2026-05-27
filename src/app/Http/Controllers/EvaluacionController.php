@@ -63,8 +63,14 @@ class EvaluacionController extends Controller
             abort(403);
         }
 
+        $apelacion   = $nomina->apelacion;
+        $esApelacion = $apelacion && $apelacion->estado === 'resuelta'
+                       && !$nomina->calificacionFinal()->where('es_apelacion', true)->exists();
+
         $categorias = CategoriaApa::orderBy('orden')->get();
-        $evidencias = $nomina->evidenciasNormales()->with('categoria')->get();
+        $evidencias = $esApelacion
+            ? $nomina->evidenciasApelacion()->with('categoria')->get()
+            : $nomina->evidenciasNormales()->with('categoria')->get();
 
         $evidenciasPorCategoria = [];
         foreach ($evidencias as $ev) {
@@ -80,19 +86,21 @@ class EvaluacionController extends Controller
 
         $miEvaluacion = Evaluacion::where('nomina_id', $nomina->id)
             ->where('evaluador_id', $user->id)
-            ->where('es_apelacion', false)
+            ->where('es_apelacion', $esApelacion)
             ->first();
 
         $todasEvaluaciones = Evaluacion::with('evaluador')
             ->where('nomina_id', $nomina->id)
-            ->where('es_apelacion', false)
+            ->where('es_apelacion', $esApelacion)
             ->get()
             ->map(fn ($e) => [
-                'evaluador' => $e->evaluador->name,
+                'evaluador'     => $e->evaluador->name,
                 'puntaje_total' => $e->puntajeTotal(),
             ]);
 
-        $calificacionFinal = $nomina->calificacionFinal;
+        $calificacionFinal = $esApelacion
+            ? $nomina->calificacionFinal()->where('es_apelacion', true)->first()
+            : $nomina->calificacionFinal()->where('es_apelacion', false)->first();
 
         return Inertia::render('CCA/EvaluarExpediente', [
             'nomina' => [
@@ -127,6 +135,7 @@ class EvaluacionController extends Controller
                 'fecha'         => $calificacionFinal->fecha->format('d/m/Y'),
                 'observacion'   => $calificacionFinal->observacion,
             ] : null,
+            'esApelacion'            => $esApelacion,
         ]);
     }
 
@@ -157,7 +166,11 @@ class EvaluacionController extends Controller
             abort(403);
         }
 
-        if ($nomina->calificacionFinal()->where('es_apelacion', false)->exists()) {
+        $apelacion   = $nomina->apelacion;
+        $esApelacion = $apelacion && $apelacion->estado === 'resuelta'
+                       && !$nomina->calificacionFinal()->where('es_apelacion', true)->exists();
+
+        if (!$esApelacion && $nomina->calificacionFinal()->where('es_apelacion', false)->exists()) {
             return back()->with('error', 'Ya existe una calificación final. No se puede modificar la evaluación.');
         }
 
@@ -171,7 +184,7 @@ class EvaluacionController extends Controller
         ]);
 
         Evaluacion::updateOrCreate(
-            ['nomina_id' => $nomina->id, 'evaluador_id' => $user->id, 'es_apelacion' => false],
+            ['nomina_id' => $nomina->id, 'evaluador_id' => $user->id, 'es_apelacion' => $esApelacion],
             $data
         );
 
@@ -190,12 +203,16 @@ class EvaluacionController extends Controller
             abort(403);
         }
 
-        if ($nomina->calificacionFinal()->where('es_apelacion', false)->exists()) {
+        $apelacion   = $nomina->apelacion;
+        $esApelacion = $apelacion && $apelacion->estado === 'resuelta'
+                       && !$nomina->calificacionFinal()->where('es_apelacion', true)->exists();
+
+        if (!$esApelacion && $nomina->calificacionFinal()->where('es_apelacion', false)->exists()) {
             return back()->with('error', 'Este expediente ya tiene una calificación final registrada.');
         }
 
         $evaluaciones = Evaluacion::where('nomina_id', $nomina->id)
-            ->where('es_apelacion', false)
+            ->where('es_apelacion', $esApelacion)
             ->get();
 
         if ($evaluaciones->isEmpty()) {
@@ -223,13 +240,13 @@ class EvaluacionController extends Controller
         };
 
         CalificacionFinal::create([
-            'nomina_id'      => $nomina->id,
-            'puntaje_total'  => $puntajeTotal,
-            'calificacion'   => $calificacion,
-            'determinada_por'=> $user->id,
-            'fecha'          => now()->toDateString(),
-            'observacion'    => $data['observacion'] ?? null,
-            'es_apelacion'   => false,
+            'nomina_id'       => $nomina->id,
+            'puntaje_total'   => $puntajeTotal,
+            'calificacion'    => $calificacion,
+            'determinada_por' => $user->id,
+            'fecha'           => now()->toDateString(),
+            'observacion'     => $data['observacion'] ?? null,
+            'es_apelacion'    => $esApelacion,
         ]);
 
         $nomina->update(['estado' => 'evaluado']);

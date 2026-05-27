@@ -2,7 +2,7 @@ import { Head, useForm, router, usePage } from '@inertiajs/react';
 import { useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 
-export default function Evidencias({ periodo, nomina, plazo, puedeCargar, categorias, evidenciasPorCategoria }) {
+export default function Evidencias({ periodo, nomina, plazo, puedeCargar, puedeCargarApelacion, apelacion, categorias, evidenciasPorCategoria, evidenciasApelacionPorCategoria }) {
     const { flash } = usePage().props;
 
     return (
@@ -55,6 +55,33 @@ export default function Evidencias({ periodo, nomina, plazo, puedeCargar, catego
                                 tieneObservaciones={!!nomina.observacion_secretario}
                             />
                         ))}
+                    </div>
+                )}
+
+                {/* Sección evidencias de apelación */}
+                {puedeCargarApelacion && (
+                    <div className="mt-8">
+                        <div className="flex items-center gap-3 mb-4">
+                            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Evidencias de Apelación</h2>
+                            <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-700">Apelación aprobada</span>
+                        </div>
+                        {apelacion?.resolucion && (
+                            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+                                <span className="font-semibold">Observación del secretario:</span> {apelacion.resolucion}
+                            </div>
+                        )}
+                        <div className="space-y-4">
+                            {categorias.map(cat => (
+                                <CategoriaCard
+                                    key={cat.id}
+                                    categoria={cat}
+                                    evidencias={evidenciasApelacionPorCategoria?.[cat.id] ?? []}
+                                    puedeCargar={true}
+                                    esApelacion={true}
+                                    tieneObservaciones={false}
+                                />
+                            ))}
+                        </div>
                     </div>
                 )}
 
@@ -130,7 +157,7 @@ function EstadoBanner({ periodo, nomina, plazo, puedeCargar }) {
     );
 }
 
-function CategoriaCard({ categoria, evidencias, puedeCargar, tieneObservaciones }) {
+function CategoriaCard({ categoria, evidencias, puedeCargar, tieneObservaciones, esApelacion = false }) {
     const fileRef = useRef(null);
     const { data, setData, post, processing, errors, reset } = useForm({
         categoria_id: categoria.id,
@@ -138,9 +165,14 @@ function CategoriaCard({ categoria, evidencias, puedeCargar, tieneObservaciones 
         descripcion:  '',
     });
 
+    const rutaStore   = esApelacion ? '/academico/evidencias-apelacion' : '/academico/evidencias';
+    const rutaDelete  = esApelacion
+        ? (id) => `/academico/evidencias-apelacion/${id}`
+        : (id) => `/academico/evidencias/${id}`;
+
     function submit(e) {
         e.preventDefault();
-        post('/academico/evidencias', {
+        post(rutaStore, {
             forceFormData: true,
             onSuccess: () => {
                 reset('archivo', 'descripcion');
@@ -151,7 +183,7 @@ function CategoriaCard({ categoria, evidencias, puedeCargar, tieneObservaciones 
 
     function eliminar(id) {
         if (!confirm('¿Está seguro de eliminar esta evidencia?')) return;
-        router.delete(`/academico/evidencias/${id}`);
+        router.delete(rutaDelete(id));
     }
 
     return (

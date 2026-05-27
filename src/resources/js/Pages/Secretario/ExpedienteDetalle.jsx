@@ -13,7 +13,14 @@ const ESTADOS = {
 
 const PUEDE_VALIDAR = ['pendiente', 'en_carga'];
 
-export default function ExpedienteDetalle({ nomina, categorias, evidenciasPorCategoria, totalEvidencias }) {
+const CALIFICACIONES = {
+    muy_bueno:  'Muy Bueno',
+    bueno:      'Bueno',
+    aceptable:  'Aceptable',
+    deficiente: 'Deficiente',
+};
+
+export default function ExpedienteDetalle({ nomina, categorias, evidenciasPorCategoria, totalEvidencias, apelacion, calificacionFinal }) {
     const { flash } = usePage().props;
     const badge = ESTADOS[nomina.estado] ?? { label: nomina.estado, cls: 'bg-gray-100 text-gray-600' };
     const puedeValidar = PUEDE_VALIDAR.includes(nomina.estado);
@@ -224,8 +231,129 @@ export default function ExpedienteDetalle({ nomina, categorias, evidenciasPorCat
                     )
                 )}
 
+                {/* Calificación final (solo lectura) */}
+                {calificacionFinal && (
+                    <div className="mt-6 bg-indigo-50 border border-indigo-200 rounded-xl p-5">
+                        <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-1">Calificación final registrada</p>
+                        <p className="text-lg font-bold text-indigo-900">
+                            {CALIFICACIONES[calificacionFinal.calificacion] ?? calificacionFinal.calificacion}
+                            <span className="ml-2 text-base font-normal text-indigo-600">({calificacionFinal.puntaje_total} pts)</span>
+                        </p>
+                    </div>
+                )}
+
+                {/* Sección de apelación */}
+                {apelacion && (
+                    <ApelacionPanel apelacion={apelacion} nominaId={nomina.id} />
+                )}
+
             </AppLayout>
         </>
+    );
+}
+
+function ApelacionPanel({ apelacion, nominaId }) {
+    const resolverForm = useForm({ accion: 'aprobar', resolucion: '' });
+    const cerrarForm   = useForm({});
+
+    function submitResolver(e) {
+        e.preventDefault();
+        resolverForm.patch(`/secretario/apelaciones/${apelacion.id}/resolver`, { preserveScroll: true });
+    }
+
+    function submitCerrar(e) {
+        e.preventDefault();
+        cerrarForm.patch(`/secretario/apelaciones/${apelacion.id}/cerrar`, { preserveScroll: true });
+    }
+
+    const estadoApelacion = {
+        solicitada:  { label: 'Solicitada',  cls: 'bg-yellow-100 text-yellow-700' },
+        en_revision: { label: 'En revisión', cls: 'bg-blue-100 text-blue-700' },
+        resuelta:    { label: 'Resuelta',    cls: 'bg-green-100 text-green-700' },
+        rechazada:   { label: 'Rechazada',   cls: 'bg-red-100 text-red-700' },
+    };
+
+    const badge = estadoApelacion[apelacion.estado] ?? { label: apelacion.estado, cls: 'bg-gray-100 text-gray-600' };
+
+    return (
+        <div className="mt-6 bg-white border border-orange-200 rounded-xl p-5">
+            <div className="flex items-center gap-3 mb-4">
+                <h2 className="text-sm font-semibold text-gray-800">Apelación</h2>
+                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
+            </div>
+
+            <div className="mb-4">
+                <p className="text-xs font-medium text-gray-500 mb-1">Motivo</p>
+                <p className="text-sm text-gray-700">{apelacion.motivo}</p>
+            </div>
+
+            {apelacion.resolucion && (
+                <div className="mb-4">
+                    <p className="text-xs font-medium text-gray-500 mb-1">Resolución</p>
+                    <p className="text-sm text-gray-700">{apelacion.resolucion}</p>
+                </div>
+            )}
+
+            {/* Acciones: aprobar o rechazar */}
+            {apelacion.estado === 'solicitada' && (
+                <form onSubmit={submitResolver} className="space-y-3 border-t border-gray-100 pt-4">
+                    <div className="flex gap-3">
+                        <label className={`flex-1 flex items-start gap-2 border rounded-xl p-3 cursor-pointer transition-colors ${
+                            resolverForm.data.accion === 'aprobar' ? 'border-green-500 bg-green-50' : 'border-gray-200'
+                        }`}>
+                            <input type="radio" name="accion" value="aprobar"
+                                checked={resolverForm.data.accion === 'aprobar'}
+                                onChange={() => resolverForm.setData('accion', 'aprobar')}
+                                className="mt-0.5 accent-green-600" />
+                            <div>
+                                <p className="text-sm font-semibold text-gray-800">Aprobar</p>
+                                <p className="text-xs text-gray-500">El académico podrá cargar nuevas evidencias.</p>
+                            </div>
+                        </label>
+                        <label className={`flex-1 flex items-start gap-2 border rounded-xl p-3 cursor-pointer transition-colors ${
+                            resolverForm.data.accion === 'rechazar' ? 'border-red-400 bg-red-50' : 'border-gray-200'
+                        }`}>
+                            <input type="radio" name="accion" value="rechazar"
+                                checked={resolverForm.data.accion === 'rechazar'}
+                                onChange={() => resolverForm.setData('accion', 'rechazar')}
+                                className="mt-0.5 accent-red-500" />
+                            <div>
+                                <p className="text-sm font-semibold text-gray-800">Rechazar</p>
+                                <p className="text-xs text-gray-500">La calificación original se mantiene.</p>
+                            </div>
+                        </label>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Resolución / observación (opcional)</label>
+                        <textarea rows={2} value={resolverForm.data.resolucion}
+                            onChange={e => resolverForm.setData('resolucion', e.target.value)}
+                            placeholder="Indique el fundamento de su decisión..."
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2D6B]/30 focus:border-[#1B2D6B] resize-none" />
+                    </div>
+                    <div className="flex justify-end">
+                        <button type="submit" disabled={resolverForm.processing}
+                            className="px-5 py-2.5 bg-[#1B2D6B] text-white text-sm font-medium rounded-lg hover:bg-[#152558] disabled:opacity-40 transition-colors">
+                            {resolverForm.processing ? 'Guardando...' : 'Confirmar resolución'}
+                        </button>
+                    </div>
+                </form>
+            )}
+
+            {/* Cerrar re-carga y enviar a CCA */}
+            {apelacion.estado === 'en_revision' && (
+                <form onSubmit={submitCerrar} className="border-t border-gray-100 pt-4">
+                    <p className="text-xs text-gray-500 mb-3">
+                        Una vez que el académico haya cargado sus evidencias de apelación, cierre la revisión para que la CCA pueda re-evaluar.
+                    </p>
+                    <div className="flex justify-end">
+                        <button type="submit" disabled={cerrarForm.processing}
+                            className="px-5 py-2.5 bg-purple-700 text-white text-sm font-medium rounded-lg hover:bg-purple-800 disabled:opacity-40 transition-colors">
+                            {cerrarForm.processing ? 'Cerrando...' : 'Cerrar revisión y enviar a CCA'}
+                        </button>
+                    </div>
+                </form>
+            )}
+        </div>
     );
 }
 

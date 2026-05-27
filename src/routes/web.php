@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ApelacionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EvaluacionController;
@@ -35,11 +36,13 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('role:secretario')->prefix('secretario')->group(function () {
-        Route::get('/dashboard',                          [DashboardController::class,  'secretario'])->name('secretario.dashboard');
+        Route::get('/dashboard',                                                [DashboardController::class,  'secretario'])->name('secretario.dashboard');
         Route::get('/expedientes',                                              [SecretarioController::class, 'expedientes'])->name('secretario.expedientes');
         Route::get('/expedientes/{nomina}',                                     [SecretarioController::class, 'showExpediente'])->name('secretario.expedientes.show');
         Route::patch('/expedientes/{nomina}/validar',                           [SecretarioController::class, 'validarExpediente'])->name('secretario.expedientes.validar');
         Route::get('/expedientes/{nomina}/evidencias/{evidencia}/descargar',    [SecretarioController::class, 'downloadEvidencia'])->name('secretario.evidencias.download');
+        Route::patch('/apelaciones/{apelacion}/resolver',                       [ApelacionController::class,  'resolver'])->name('secretario.apelaciones.resolver');
+        Route::patch('/apelaciones/{apelacion}/cerrar',                         [ApelacionController::class,  'cerrar'])->name('secretario.apelaciones.cerrar');
         Route::post('/plazos',                                                  [SecretarioController::class, 'storePlazo'])->name('secretario.plazos.store');
         Route::post('/cierre',                                                  [SecretarioController::class, 'cerrarRecepcion'])->name('secretario.cierre');
     });
@@ -59,9 +62,12 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:academico')->prefix('academico')->group(function () {
         Route::get('/dashboard',  [DashboardController::class,  'academico'])->name('academico.dashboard');
-        Route::get('/evidencias',                          [EvidenciaController::class, 'index'])->name('academico.evidencias');
-        Route::post('/evidencias',                         [EvidenciaController::class, 'store'])->name('academico.evidencias.store');
-        Route::get('/evidencias/{evidencia}/descargar',    [EvidenciaController::class, 'download'])->name('academico.evidencias.download');
-        Route::delete('/evidencias/{evidencia}',           [EvidenciaController::class, 'destroy'])->name('academico.evidencias.destroy');
+        Route::get('/evidencias',                          [EvidenciaController::class,  'index'])->name('academico.evidencias');
+        Route::post('/evidencias',                         [EvidenciaController::class,  'store'])->name('academico.evidencias.store');
+        Route::get('/evidencias/{evidencia}/descargar',    [EvidenciaController::class,  'download'])->name('academico.evidencias.download');
+        Route::delete('/evidencias/{evidencia}',           [EvidenciaController::class,  'destroy'])->name('academico.evidencias.destroy');
+        Route::post('/apelacion',                          [ApelacionController::class,  'store'])->name('academico.apelacion.store');
+        Route::post('/evidencias-apelacion',               [EvidenciaController::class,  'storeApelacion'])->name('academico.evidencias.apelacion.store');
+        Route::delete('/evidencias-apelacion/{evidencia}', [EvidenciaController::class,  'destroyApelacion'])->name('academico.evidencias.apelacion.destroy');
     });
 });
