@@ -103,57 +103,89 @@ function EstadoBanner({ periodo, nomina, plazo, puedeCargar }) {
 
     const estadoInfo = estadoLabels[nomina?.estado] ?? { label: nomina?.estado, color: 'text-gray-700 bg-gray-100' };
 
+    const formatDate = (dateStr) => {
+        if (!dateStr) return null;
+        const [y, m, d] = dateStr.split('-');
+        return `${d}/${m}/${y}`;
+    };
+
+    const plazoLicenciaVigente = nomina?.plazo_licencia
+        ? new Date(nomina.plazo_licencia) >= new Date(new Date().toDateString())
+        : false;
+
     return (
-        <div className="mb-6 bg-white border border-gray-200 rounded-xl p-4 flex flex-wrap items-center gap-x-6 gap-y-3">
-            <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">Período</p>
-                <p className="font-semibold text-gray-800 text-sm">{periodo.nombre}</p>
-            </div>
-
-            {plazo && (
-                <div className="border-l border-gray-200 pl-6">
-                    <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">Plazo de carga</p>
-                    {plazo.cerrado ? (
-                        <p className="font-semibold text-sm text-red-700">
-                            Recepción cerrada
-                            <span className="ml-1.5 font-normal text-xs opacity-80">({plazo.cerrado_en})</span>
-                        </p>
-                    ) : (
-                        <p className={`font-semibold text-sm ${plazo.vigente ? 'text-green-700' : 'text-red-700'}`}>
-                            {plazo.fecha_limite}
-                            <span className="ml-1.5 font-normal text-xs opacity-80">
-                                ({plazo.vigente ? 'vigente' : 'vencido'})
-                            </span>
-                        </p>
-                    )}
-                </div>
-            )}
-
-            {nomina && (
-                <div className="border-l border-gray-200 pl-6">
-                    <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">Estado expediente</p>
-                    <span className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-xs font-semibold ${estadoInfo.color}`}>
-                        {estadoInfo.label}
-                    </span>
-                </div>
-            )}
-
+        <>
+            {/* Banner de licencia médica */}
             {nomina?.con_licencia && (
-                <div className="border-l border-gray-200 pl-6">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        Caso especial · Licencia médica
-                    </span>
+                <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+                    <div className="flex items-start gap-3">
+                        <div className="flex-1">
+                            <p className="text-sm font-semibold text-amber-800">Estás marcado/a con licencia médica</p>
+                            {nomina.observacion_licencia && (
+                                <p className="text-xs text-amber-700 mt-0.5">{nomina.observacion_licencia}</p>
+                            )}
+                            <div className="mt-2">
+                                {nomina.plazo_licencia ? (
+                                    <p className={`text-sm font-medium ${plazoLicenciaVigente ? 'text-green-700' : 'text-red-700'}`}>
+                                        Plazo especial: <span className="font-bold">{formatDate(nomina.plazo_licencia)}</span>
+                                        <span className="ml-1.5 text-xs font-normal">
+                                            ({plazoLicenciaVigente ? 'vigente' : 'vencido'})
+                                        </span>
+                                    </p>
+                                ) : (
+                                    <p className="text-sm text-amber-700">
+                                        El secretario de su facultad debe asignarle un plazo especial de entrega.
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 
-            <div className="ml-auto">
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                    puedeCargar ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
-                    {puedeCargar ? 'Carga habilitada' : 'Carga no disponible'}
-                </span>
+            <div className="mb-6 bg-white border border-gray-200 rounded-xl p-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+                <div>
+                    <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">Período</p>
+                    <p className="font-semibold text-gray-800 text-sm">{periodo.nombre}</p>
+                </div>
+
+                {!nomina?.con_licencia && plazo && (
+                    <div className="border-l border-gray-200 pl-6">
+                        <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">Plazo de carga</p>
+                        {plazo.cerrado ? (
+                            <p className="font-semibold text-sm text-red-700">
+                                Recepción cerrada
+                                <span className="ml-1.5 font-normal text-xs opacity-80">({plazo.cerrado_en})</span>
+                            </p>
+                        ) : (
+                            <p className={`font-semibold text-sm ${plazo.vigente ? 'text-green-700' : 'text-red-700'}`}>
+                                {plazo.fecha_limite}
+                                <span className="ml-1.5 font-normal text-xs opacity-80">
+                                    ({plazo.vigente ? 'vigente' : 'vencido'})
+                                </span>
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {nomina && (
+                    <div className="border-l border-gray-200 pl-6">
+                        <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">Estado expediente</p>
+                        <span className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-xs font-semibold ${estadoInfo.color}`}>
+                            {estadoInfo.label}
+                        </span>
+                    </div>
+                )}
+
+                <div className="ml-auto">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                        puedeCargar ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                        {puedeCargar ? 'Carga habilitada' : 'Carga no disponible'}
+                    </span>
+                </div>
             </div>
-        </div>
+        </>
     );
 }
 

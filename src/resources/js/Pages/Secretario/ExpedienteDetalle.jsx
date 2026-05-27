@@ -1,4 +1,5 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { useRef } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 
 const ESTADOS = {
@@ -253,6 +254,11 @@ export default function ExpedienteDetalle({ nomina, categorias, evidenciasPorCat
                     </form>
                 )}
 
+                {/* Panel de licencia médica */}
+                {nomina.con_licencia && (
+                    <LicenciaPanel nomina={nomina} />
+                )}
+
                 {/* Calificación final (solo lectura) */}
                 {calificacionFinal && (
                     <div className="mt-6 bg-indigo-50 border border-indigo-200 rounded-xl p-5">
@@ -271,6 +277,115 @@ export default function ExpedienteDetalle({ nomina, categorias, evidenciasPorCat
 
             </AppLayout>
         </>
+    );
+}
+
+function LicenciaPanel({ nomina }) {
+    const fileRef = useRef(null);
+    const { data, setData, post, processing, errors } = useForm({
+        plazo_licencia: nomina.plazo_licencia ?? '',
+        documento:      null,
+    });
+
+    function submit(e) {
+        e.preventDefault();
+        post(`/secretario/expedientes/${nomina.id}/licencia-plazo`, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                setData('documento', null);
+                if (fileRef.current) fileRef.current.value = '';
+            },
+        });
+    }
+
+    const formatDate = (dateStr) => {
+        if (!dateStr) return null;
+        const [y, m, d] = dateStr.split('-');
+        return `${d}/${m}/${y}`;
+    };
+
+    const plazoVigente = nomina.plazo_licencia
+        ? new Date(nomina.plazo_licencia) >= new Date(new Date().toDateString())
+        : false;
+
+    return (
+        <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-5">
+            <h2 className="text-sm font-semibold text-amber-800 mb-1">Licencia médica — Plazo especial</h2>
+            {nomina.observacion_licencia && (
+                <p className="text-xs text-amber-700 mb-4">{nomina.observacion_licencia}</p>
+            )}
+
+            {nomina.plazo_licencia && (
+                <div className="flex items-center gap-4 mb-4">
+                    <p className={`text-sm font-semibold ${plazoVigente ? 'text-green-700' : 'text-red-700'}`}>
+                        Plazo actual: {formatDate(nomina.plazo_licencia)}
+                        <span className="ml-1.5 font-normal text-xs">({plazoVigente ? 'vigente' : 'vencido'})</span>
+                    </p>
+                    {nomina.url_documento_licencia && (
+                        <a
+                            href={nomina.url_documento_licencia}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs text-[#0096D6] hover:underline flex items-center gap-1"
+                        >
+                            <DownloadIcon /> Ver documento
+                        </a>
+                    )}
+                </div>
+            )}
+
+            <form onSubmit={submit} className="space-y-3">
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1">
+                        <label className="block text-xs font-medium text-amber-800 mb-1">
+                            {nomina.plazo_licencia ? 'Actualizar plazo' : 'Asignar plazo especial'}
+                        </label>
+                        <input
+                            type="date"
+                            value={data.plazo_licencia}
+                            onChange={e => setData('plazo_licencia', e.target.value)}
+                            className="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400 bg-white"
+                        />
+                        {errors.plazo_licencia && (
+                            <p className="text-xs text-red-600 mt-1">{errors.plazo_licencia}</p>
+                        )}
+                    </div>
+
+                    <div className="flex-1">
+                        <label className="block text-xs font-medium text-amber-800 mb-1">
+                            Documento de respaldo (opcional)
+                        </label>
+                        <div
+                            onClick={() => fileRef.current?.click()}
+                            className="border border-dashed border-amber-300 rounded-lg px-3 py-2 text-sm text-amber-700 cursor-pointer hover:border-amber-500 bg-white"
+                        >
+                            {data.documento ? data.documento.name : 'PDF, JPG o PNG (máx. 5 MB)'}
+                        </div>
+                        <input
+                            ref={fileRef}
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            className="sr-only"
+                            onChange={e => setData('documento', e.target.files[0] ?? null)}
+                        />
+                        {errors.documento && (
+                            <p className="text-xs text-red-600 mt-1">{errors.documento}</p>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex justify-end">
+                    <button
+                        type="submit"
+                        disabled={processing || !data.plazo_licencia}
+                        className="px-5 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-40 text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                        {processing ? 'Guardando...' : (nomina.plazo_licencia ? 'Actualizar plazo' : 'Asignar plazo')}
+                    </button>
+                </div>
+            </form>
+        </div>
     );
 }
 

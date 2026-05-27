@@ -91,6 +91,10 @@ class SecretarioController extends Controller
                 'estado'                 => $nomina->estado,
                 'con_licencia'           => $nomina->con_licencia,
                 'observacion_licencia'   => $nomina->observacion_licencia,
+                'plazo_licencia'         => $nomina->plazo_licencia?->format('Y-m-d'),
+                'url_documento_licencia' => $nomina->documento_licencia
+                    ? Storage::disk('public')->url($nomina->documento_licencia)
+                    : null,
                 'observacion_secretario' => $nomina->observacion_secretario,
                 'academico'              => [
                     'name'  => $nomina->academico->name,
@@ -207,6 +211,43 @@ class SecretarioController extends Controller
             ->update(['estado' => 'carga_cerrada']);
 
         return back()->with('success', 'Recepción de evidencias cerrada formalmente. Todos los expedientes activos han sido cerrados.');
+    }
+
+    public function setPlazolicencia(Request $request, Nomina $nomina)
+    {
+        $user = auth()->user();
+
+        if ($nomina->academico->facultad_id !== $user->facultad_id) {
+            abort(403);
+        }
+
+        if (!$nomina->con_licencia) {
+            return back()->with('error', 'Este expediente no tiene una licencia registrada.');
+        }
+
+        $data = $request->validate([
+            'plazo_licencia' => ['required', 'date', 'after_or_equal:today'],
+            'documento'      => ['nullable', 'file', 'max:5120', 'mimes:pdf,jpg,jpeg,png'],
+        ], [
+            'plazo_licencia.required'       => 'La fecha límite es obligatoria.',
+            'plazo_licencia.after_or_equal' => 'La fecha límite no puede ser anterior a hoy.',
+            'documento.mimes'               => 'Solo se permiten archivos PDF e imágenes (JPG, PNG).',
+            'documento.max'                 => 'El documento no puede superar los 5 MB.',
+        ]);
+
+        $updates = ['plazo_licencia' => $data['plazo_licencia']];
+
+        if ($request->hasFile('documento')) {
+            if ($nomina->documento_licencia) {
+                Storage::disk('public')->delete($nomina->documento_licencia);
+            }
+            $updates['documento_licencia'] = $request->file('documento')
+                ->store("licencias/{$nomina->id}", 'public');
+        }
+
+        $nomina->update($updates);
+
+        return back()->with('success', 'Plazo especial actualizado correctamente.');
     }
 
     public function downloadEvidencia(Nomina $nomina, Evidencia $evidencia): StreamedResponse

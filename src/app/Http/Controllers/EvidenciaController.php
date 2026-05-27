@@ -44,12 +44,20 @@ class EvidenciaController extends Controller
             }
         }
 
-        // Puede cargar si: tiene nómina activa + sin cierre formal + plazo vigente (o sin plazo, o con licencia)
         $cerradoFormalmente = $plazo['cerrado'] ?? false;
-        $puedeCargar = $nomina
-            && $nomina->puedeCargarEvidencias()
-            && !$cerradoFormalmente
-            && ($plazo === null || $plazo['vigente'] || $nomina->con_licencia);
+
+        if ($nomina && $nomina->con_licencia) {
+            $plazoLicencia = $nomina->plazo_licencia;
+            $puedeCargar = $nomina->puedeCargarEvidencias()
+                && !$cerradoFormalmente
+                && $plazoLicencia !== null
+                && $plazoLicencia->toDateString() >= now()->toDateString();
+        } else {
+            $puedeCargar = $nomina
+                && $nomina->puedeCargarEvidencias()
+                && !$cerradoFormalmente
+                && ($plazo === null || $plazo['vigente']);
+        }
 
         $evidenciasPorCategoria = [];
         if ($nomina) {
@@ -91,6 +99,8 @@ class EvidenciaController extends Controller
                 'id'                     => $nomina->id,
                 'estado'                 => $nomina->estado,
                 'con_licencia'           => $nomina->con_licencia,
+                'observacion_licencia'   => $nomina->observacion_licencia,
+                'plazo_licencia'         => $nomina->plazo_licencia?->format('Y-m-d'),
                 'observacion_secretario' => $nomina->observacion_secretario,
             ] : null,
             'plazo'                           => $plazo,
@@ -140,7 +150,11 @@ class EvidenciaController extends Controller
             return back()->with('error', 'La recepción de evidencias fue cerrada formalmente. No se aceptan nuevas cargas.');
         }
 
-        if (!$nomina->con_licencia && $plazoRecord && !$plazoRecord->estaVigente()) {
+        if ($nomina->con_licencia) {
+            if (!$nomina->plazo_licencia || $nomina->plazo_licencia->toDateString() < now()->toDateString()) {
+                return back()->with('error', 'No tiene un plazo especial activo. Contacte a su secretario de facultad.');
+            }
+        } elseif ($plazoRecord && !$plazoRecord->estaVigente()) {
             return back()->with('error', 'El plazo de carga de evidencias ha vencido.');
         }
 

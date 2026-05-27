@@ -14,12 +14,16 @@ class Nomina extends Model
 
     protected $fillable = [
         'periodo_id', 'user_id', 'estado',
-        'con_licencia', 'observacion_licencia', 'observacion_secretario',
+        'con_licencia', 'observacion_licencia', 'plazo_licencia', 'documento_licencia',
+        'observacion_secretario',
     ];
 
     protected function casts(): array
     {
-        return ['con_licencia' => 'boolean'];
+        return [
+            'con_licencia'   => 'boolean',
+            'plazo_licencia' => 'date',
+        ];
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
