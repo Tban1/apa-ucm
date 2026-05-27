@@ -93,7 +93,7 @@ export default function PeriodoCreate() {
                             Cronograma de etapas
                         </h2>
                         <p className="text-xs text-gray-400 mb-5">
-                            Todas las fechas deben estar dentro del período principal.
+                            Todas las etapas inician en paralelo desde el comienzo del período. Defina solo la fecha de cierre de cada una.
                         </p>
 
                         {errors.cronograma && (
@@ -102,9 +102,8 @@ export default function PeriodoCreate() {
 
                         <div className="space-y-4">
                             {ETAPAS.map((etapa, i) => {
-                                const finAnterior = i > 0 ? data.cronograma[i - 1].fecha_fin : data.fecha_inicio;
-                                const minInicio   = finAnterior || data.fecha_inicio || undefined;
-                                const minFin      = data.cronograma[i].fecha_inicio || minInicio;
+                                const minInicio = data.fecha_inicio || undefined;
+                                const minFin    = data.cronograma[i].fecha_inicio || minInicio;
 
                                 return (
                                     <div key={etapa.value}>
