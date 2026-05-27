@@ -75,12 +75,22 @@ export default function PeriodoIndex({ periodos }) {
                                             <td className="px-5 py-3 text-gray-600">{formatDate(p.fecha_cierre)}</td>
                                             <td className="px-5 py-3 text-gray-600">{p.nominas_count ?? 0}</td>
                                             <td className="px-5 py-3">
-                                                <Link
-                                                    href={`/analista/periodos/${p.id}/nominas/crear`}
-                                                    className="text-xs font-medium text-[#0096D6] hover:underline"
-                                                >
-                                                    Gestionar nómina
-                                                </Link>
+                                                <div className="flex items-center gap-3">
+                                                    <Link
+                                                        href={`/analista/periodos/${p.id}/nominas/crear`}
+                                                        className="text-xs font-medium text-[#0096D6] hover:underline"
+                                                    >
+                                                        Gestionar nómina
+                                                    </Link>
+                                                    <a
+                                                        href={`/analista/periodos/${p.id}/cronograma/pdf`}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="text-xs font-medium text-gray-500 hover:text-gray-700 hover:underline"
+                                                    >
+                                                        Cronograma PDF
+                                                    </a>
+                                                </div>
                                             </td>
                                         </tr>
                                     );

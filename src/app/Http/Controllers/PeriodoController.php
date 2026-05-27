@@ -62,6 +62,33 @@ class PeriodoController extends Controller
             ->with('success', 'Período registrado. Notificaciones enviadas a académicos y secretarios.');
     }
 
+    public function imprimirCronograma(Periodo $periodo)
+    {
+        $etiquetas = [
+            'carga_evidencias'      => 'Carga de Evidencias',
+            'evaluacion_secretario' => 'Evaluación Secretario',
+            'evaluacion_cca'        => 'Evaluación CCA',
+            'apelaciones'           => 'Apelaciones',
+            'evaluacion_jefatura'   => 'Evaluación Jefatura',
+            'cierre'                => 'Cierre',
+        ];
+
+        $orden = array_flip(array_keys($etiquetas));
+
+        $cronogramas = $periodo->cronogramas()
+            ->get()
+            ->sortBy(fn ($c) => $orden[$c->etapa] ?? 99)
+            ->map(fn ($c) => [
+                'etapa'        => $etiquetas[$c->etapa] ?? $c->etapa,
+                'fecha_inicio' => $c->fecha_inicio->format('d/m/Y'),
+                'fecha_fin'    => $c->fecha_fin->format('d/m/Y'),
+                'vigente'      => $c->estaVigente(),
+                'terminado'    => $c->haTerminado(),
+            ]);
+
+        return view('cronograma.imprimir', compact('periodo', 'cronogramas'));
+    }
+
     private function notificarInicio(Periodo $periodo): void
     {
         $inicio = \Carbon\Carbon::parse($periodo->fecha_inicio)->format('d/m/Y');

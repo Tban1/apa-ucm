@@ -30,8 +30,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/periodos/crear', [PeriodoController::class, 'create'])->name('analista.periodos.create');
         Route::post('/periodos',      [PeriodoController::class, 'store'])->name('analista.periodos.store');
 
-        Route::get('/periodos/{periodo}/nominas/crear', [NominaController::class, 'create'])->name('analista.periodos.nominas.create');
-        Route::post('/periodos/{periodo}/nominas',      [NominaController::class, 'store'])->name('analista.periodos.nominas.store');
+        Route::get('/periodos/{periodo}/nominas/crear',  [NominaController::class,  'create'])->name('analista.periodos.nominas.create');
+        Route::post('/periodos/{periodo}/nominas',       [NominaController::class,  'store'])->name('analista.periodos.nominas.store');
+        Route::get('/periodos/{periodo}/cronograma/pdf', [PeriodoController::class, 'imprimirCronograma'])->name('analista.periodos.cronograma.pdf');
 
         Route::patch('/nominas/{nomina}/licencia', [NominaController::class, 'toggleLicencia'])->name('analista.nominas.licencia');
     });
