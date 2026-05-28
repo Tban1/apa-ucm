@@ -106,14 +106,26 @@ export default function EvaluarExpediente({
                 {/* Calificación final ya registrada */}
                 {calificacionFinal && (
                     <div className="bg-green-50 border border-green-200 rounded-xl p-5 mb-6">
-                        <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">Calificación Final</p>
-                        <p className="text-2xl font-bold text-green-800">
-                            {CALIFICACIONES[calificacionFinal.calificacion]} — {calificacionFinal.puntaje_total} pts
-                        </p>
-                        <p className="text-xs text-green-600 mt-1">Registrada el {calificacionFinal.fecha}</p>
-                        {calificacionFinal.observacion && (
-                            <p className="text-sm text-green-700 mt-2">{calificacionFinal.observacion}</p>
-                        )}
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">Calificación Final</p>
+                                <p className="text-2xl font-bold text-green-800">
+                                    {CALIFICACIONES[calificacionFinal.calificacion]} — {calificacionFinal.puntaje_total} pts
+                                </p>
+                                <p className="text-xs text-green-600 mt-1">Registrada el {calificacionFinal.fecha}</p>
+                                {calificacionFinal.observacion && (
+                                    <p className="text-sm text-green-700 mt-2">{calificacionFinal.observacion}</p>
+                                )}
+                            </div>
+                            <a
+                                href={`/cca/expedientes/${nomina.id}/calificacion-pdf`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="shrink-0 ml-4 flex items-center gap-1.5 text-xs font-medium text-[#1B2D6B] border border-[#1B2D6B]/30 bg-white hover:bg-[#1B2D6B]/5 px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                                <PrintIcon /> Imprimir informe
+                            </a>
+                        </div>
                     </div>
                 )}
 
@@ -301,6 +313,15 @@ function BackIcon() {
     return (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+        </svg>
+    );
+}
+
+function PrintIcon() {
+    return (
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.38-4.171l.36 4.171M6.34 18H5.25A2.25 2.25 0 013 15.75V9a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 9v6.75a2.25 2.25 0 01-2.25 2.25H17.66m-11.32 0l-.36-4.171M17.66 18l.36-4.171M6.34 18h11.32M9 9.75h6M9 12.75h6" />
         </svg>
     );
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Acta;
 use App\Models\CategoriaApa;
 use App\Models\Evidencia;
 use App\Models\Nomina;
@@ -10,6 +11,8 @@ use App\Models\Periodo;
 use App\Models\PlazoFacultad;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -24,8 +27,12 @@ class SecretarioController extends Controller
         $expedientes = collect();
         $plazo       = null;
 
+        $actaCierre        = null;
+        $puedesCerrarProceso = false;
+        $motivoNoPuede     = null;
+
         if ($periodo && $user->facultad_id) {
-            $expedientes = Nomina::with('academico')
+            $expedientes = Nomina::with(['academico', 'apelacion'])
                 ->where('periodo_id', $periodo->id)
                 ->whereHas('academico', fn ($q) => $q->where('facultad_id', $user->facultad_id))
                 ->orderBy('created_at')
@@ -54,12 +61,32 @@ class SecretarioController extends Controller
                     'cerrado_en'   => $plazoModel->cerrado_en?->format('d/m/Y H:i'),
                 ];
             }
+
+            $actaModel = Acta::where('periodo_id', $periodo->id)
+                ->where('facultad_id', $user->facultad_id)
+                ->where('tipo', 'cierre_proceso')
+                ->first();
+
+            if ($actaModel) {
+                $actaCierre = [
+                    'id'    => $actaModel->id,
+                    'fecha' => $actaModel->fecha->format('d/m/Y'),
+                    'url'   => route('secretario.acta-cierre', $actaModel->id),
+                ];
+            } else {
+                [$puedesCerrarProceso, $motivoNoPuede] = $this->verificarCierreProceso(
+                    $periodo->id, $user->facultad_id, $plazoModel
+                );
+            }
         }
 
         return Inertia::render('Secretario/Expedientes', [
-            'periodo'     => $periodo?->only(['id', 'anio', 'nombre', 'fecha_cierre']),
-            'expedientes' => $expedientes->values(),
-            'plazo'       => $plazo,
+            'periodo'              => $periodo?->only(['id', 'anio', 'nombre', 'fecha_cierre']),
+            'expedientes'          => $expedientes->values(),
+            'plazo'                => $plazo,
+            'actaCierre'           => $actaCierre,
+            'puedesCerrarProceso'  => $puedesCerrarProceso,
+            'motivoNoPuede'        => $motivoNoPuede,
         ]);
     }
 
@@ -116,6 +143,126 @@ class SecretarioController extends Controller
                 'calificacion'  => $nomina->calificacionFinal->calificacion,
             ] : null,
         ]);
+    }
+
+    private function verificarCierreProceso(string $periodoId, string $facultadId, ?PlazoFacultad $plazo): array
+    {
+        if (!$plazo || !$plazo->estaCerradoFormalmente()) {
+            return [false, 'Primero debes cerrar formalmente la recepción de evidencias.'];
+        }
+
+        $nominas = Nomina::with('apelacion')
+            ->where('periodo_id', $periodoId)
+            ->whereHas('academico', fn ($q) => $q->where('facultad_id', $facultadId))
+            ->get();
+
+        $conApelacionPendiente = $nominas->filter(
+            fn ($n) => $n->apelacion && $n->apelacion->estado === 'pendiente'
+        )->count();
+
+        if ($conApelacionPendiente > 0) {
+            return [false, "Hay {$conApelacionPendiente} apelación(es) pendiente(s) de resolver."];
+        }
+
+        $sinEvaluar = $nominas->filter(
+            fn ($n) => !in_array($n->estado, ['evaluado', 'cerrado'])
+        )->count();
+
+        if ($sinEvaluar > 0) {
+            return [false, "Hay {$sinEvaluar} expediente(s) sin calificación final."];
+        }
+
+        return [true, null];
+    }
+
+    public function cerrarProceso()
+    {
+        $user    = auth()->user();
+        $periodo = Periodo::where('estado', 'activo')->latest()->first();
+
+        if (!$periodo || !$user->facultad_id) {
+            return back()->with('error', 'No hay un período activo configurado.');
+        }
+
+        $actaExistente = Acta::where('periodo_id', $periodo->id)
+            ->where('facultad_id', $user->facultad_id)
+            ->where('tipo', 'cierre_proceso')
+            ->exists();
+
+        if ($actaExistente) {
+            return back()->with('error', 'El proceso de esta facultad ya fue cerrado formalmente.');
+        }
+
+        $plazo = PlazoFacultad::where('periodo_id', $periodo->id)
+            ->where('facultad_id', $user->facultad_id)
+            ->first();
+
+        [$puede, $motivo] = $this->verificarCierreProceso($periodo->id, $user->facultad_id, $plazo);
+
+        if (!$puede) {
+            return back()->with('error', $motivo);
+        }
+
+        $acta = Acta::create([
+            'periodo_id'  => $periodo->id,
+            'facultad_id' => $user->facultad_id,
+            'generada_por' => $user->id,
+            'fecha'       => now()->toDateString(),
+            'tipo'        => 'cierre_proceso',
+        ]);
+
+        Nomina::where('periodo_id', $periodo->id)
+            ->whereHas('academico', fn ($q) => $q->where('facultad_id', $user->facultad_id))
+            ->where('estado', 'evaluado')
+            ->update(['estado' => 'cerrado']);
+
+        $nominasIds = Nomina::where('periodo_id', $periodo->id)
+            ->whereHas('academico', fn ($q) => $q->where('facultad_id', $user->facultad_id))
+            ->pluck('user_id');
+
+        $notificaciones = $nominasIds->map(fn ($uid) => [
+            'id'         => Str::uuid(),
+            'user_id'    => $uid,
+            'tipo'       => 'cierre_proceso',
+            'titulo'     => 'Proceso de calificación cerrado',
+            'mensaje'    => 'El proceso de Calificación Académica Docente ha sido cerrado formalmente por la secretaría de su facultad.',
+            'leida'      => false,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ])->toArray();
+
+        Notificacion::insert($notificaciones);
+
+        return back()->with('success', 'Proceso cerrado formalmente. Se generó el acta de cierre.');
+    }
+
+    public function imprimirActaCierre(Acta $acta): View
+    {
+        $user = auth()->user();
+
+        if ($acta->facultad_id !== $user->facultad_id || $acta->tipo !== 'cierre_proceso') {
+            abort(403);
+        }
+
+        $periodo  = $acta->periodo;
+        $facultad = $acta->facultad;
+
+        $nominas = Nomina::with(['academico.departamento', 'calificacionFinal'])
+            ->where('periodo_id', $acta->periodo_id)
+            ->whereHas('academico', fn ($q) => $q->where('facultad_id', $acta->facultad_id))
+            ->orderBy('created_at')
+            ->get()
+            ->map(fn ($n) => [
+                'nombre'       => $n->academico->name,
+                'rut'          => $n->academico->rut,
+                'departamento' => $n->academico->departamento?->nombre,
+                'calificacion' => $n->calificacionFinal?->calificacion,
+                'puntaje'      => $n->calificacionFinal?->puntaje_total,
+                'es_apelacion' => $n->calificacionFinal?->es_apelacion ?? false,
+                'observacion'  => $n->calificacionFinal?->observacion,
+            ]);
+
+        return view('secretario.acta_cierre', compact('acta', 'periodo', 'facultad', 'nominas'));
     }
 
     private function formatApelacion(Nomina $nomina): ?array

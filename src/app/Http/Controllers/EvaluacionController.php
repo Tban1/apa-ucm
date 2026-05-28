@@ -12,6 +12,7 @@ use App\Models\Notificacion;
 use App\Models\Periodo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -217,6 +218,31 @@ class EvaluacionController extends Controller
         }
 
         return back()->with('success', 'Evaluación registrada correctamente.');
+    }
+
+    public function imprimirCalificacion(Nomina $nomina): View
+    {
+        $user = auth()->user();
+
+        if ($nomina->academico->facultad_id !== $user->facultad_id) {
+            abort(403);
+        }
+
+        $calificacion = $nomina->calificacionFinal;
+        if (!$calificacion) {
+            abort(404, 'Este expediente no tiene calificación final.');
+        }
+
+        $esApelacion = $calificacion->es_apelacion;
+
+        $evaluaciones = Evaluacion::with('evaluador')
+            ->where('nomina_id', $nomina->id)
+            ->where('es_apelacion', $esApelacion)
+            ->get();
+
+        $periodo = $nomina->periodo;
+
+        return view('cca.calificacion', compact('nomina', 'calificacion', 'evaluaciones', 'periodo'));
     }
 
     public function finalize(Request $request, Nomina $nomina)

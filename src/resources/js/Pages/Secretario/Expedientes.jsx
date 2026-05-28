@@ -29,14 +29,15 @@ function formatDate(dateStr) {
     return `${d}/${m}/${y}`;
 }
 
-export default function Expedientes({ periodo, expedientes, plazo }) {
+export default function Expedientes({ periodo, expedientes, plazo, actaCierre, puedesCerrarProceso, motivoNoPuede }) {
     const { flash, auth } = usePage().props;
     const facultad = auth.user.facultad?.nombre ?? '—';
 
-    const [search,          setSearch]          = useState('');
-    const [filtroEstado,    setFiltroEstado]    = useState('');
-    const [editingPlazo,    setEditingPlazo]    = useState(false);
-    const [confirmCierre,   setConfirmCierre]   = useState(false);
+    const [search,                setSearch]                = useState('');
+    const [filtroEstado,          setFiltroEstado]          = useState('');
+    const [editingPlazo,          setEditingPlazo]          = useState(false);
+    const [confirmCierre,         setConfirmCierre]         = useState(false);
+    const [confirmCierreProceso,  setConfirmCierreProceso]  = useState(false);
 
     const plazoForm = useForm({ fecha_limite: plazo?.fecha_limite ?? '' });
 
@@ -73,6 +74,13 @@ export default function Expedientes({ periodo, expedientes, plazo }) {
         router.post('/secretario/cierre', {}, {
             preserveScroll: true,
             onSuccess: () => setConfirmCierre(false),
+        });
+    }
+
+    function ejecutarCierreProceso() {
+        router.post('/secretario/cierre-proceso', {}, {
+            preserveScroll: true,
+            onSuccess: () => setConfirmCierreProceso(false),
         });
     }
 
@@ -254,6 +262,67 @@ export default function Expedientes({ periodo, expedientes, plazo }) {
                     )
                 )}
 
+                {/* ── Cierre del proceso ─────────────────────── */}
+                {periodo && (
+                    actaCierre ? (
+                        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-5 mb-6 flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-semibold text-indigo-800">Proceso cerrado formalmente</p>
+                                <p className="text-xs text-indigo-600 mt-0.5">
+                                    Acta de cierre generada el {actaCierre.fecha}.
+                                </p>
+                            </div>
+                            <a
+                                href={actaCierre.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="ml-4 shrink-0 flex items-center gap-1.5 text-xs font-medium text-indigo-700 border border-indigo-300 bg-white hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                                <PrintIcon /> Ver acta de cierre
+                            </a>
+                        </div>
+                    ) : plazo?.cerrado && (
+                        <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6 flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-semibold text-gray-800">Cierre formal del proceso</p>
+                                {puedesCerrarProceso ? (
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                        Todos los expedientes están evaluados y sin apelaciones pendientes.
+                                    </p>
+                                ) : (
+                                    <p className="text-xs text-amber-600 mt-0.5">{motivoNoPuede}</p>
+                                )}
+                            </div>
+                            {puedesCerrarProceso && (
+                                !confirmCierreProceso ? (
+                                    <button
+                                        onClick={() => setConfirmCierreProceso(true)}
+                                        className="ml-4 shrink-0 px-4 py-2 border border-indigo-300 text-indigo-700 text-sm font-medium rounded-lg hover:bg-indigo-50 transition-colors"
+                                    >
+                                        Cerrar proceso
+                                    </button>
+                                ) : (
+                                    <div className="ml-4 shrink-0 flex items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2">
+                                        <p className="text-xs text-indigo-700 font-medium">¿Confirmar cierre? Se generará el acta de cierre.</p>
+                                        <button
+                                            onClick={ejecutarCierreProceso}
+                                            className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                                        >
+                                            Confirmar
+                                        </button>
+                                        <button
+                                            onClick={() => setConfirmCierreProceso(false)}
+                                            className="text-xs text-gray-500 hover:text-gray-700"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                )
+                            )}
+                        </div>
+                    )
+                )}
+
                 {/* Stats */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                     <StatCard label="Total"       value={total}      active={!filtroEstado}                    onClick={() => setFiltroEstado('')} />
@@ -394,6 +463,15 @@ function LockIcon() {
         <svg className="w-6 h-6 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                 d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+        </svg>
+    );
+}
+
+function PrintIcon() {
+    return (
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.38-4.171l.36 4.171M6.34 18H5.25A2.25 2.25 0 013 15.75V9a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 9v6.75a2.25 2.25 0 01-2.25 2.25H17.66m-11.32 0l-.36-4.171M17.66 18l.36-4.171M6.34 18h11.32M9 9.75h6M9 12.75h6" />
         </svg>
     );
 }

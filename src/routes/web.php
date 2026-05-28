@@ -10,6 +10,7 @@ use App\Http\Controllers\NominaController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\PeriodoController;
 use App\Http\Controllers\SecretarioController;
+use App\Models\Acta;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -51,6 +52,8 @@ Route::middleware('auth')->group(function () {
         Route::patch('/apelaciones/{apelacion}/cerrar',                         [ApelacionController::class,  'cerrar'])->name('secretario.apelaciones.cerrar');
         Route::post('/plazos',                                                  [SecretarioController::class, 'storePlazo'])->name('secretario.plazos.store');
         Route::post('/cierre',                                                  [SecretarioController::class, 'cerrarRecepcion'])->name('secretario.cierre');
+        Route::post('/cierre-proceso',                                          [SecretarioController::class, 'cerrarProceso'])->name('secretario.cierre-proceso');
+        Route::get('/acta-cierre/{acta}',                                       [SecretarioController::class, 'imprimirActaCierre'])->name('secretario.acta-cierre');
     });
 
     Route::middleware('role:miembro_cca')->prefix('cca')->group(function () {
@@ -60,6 +63,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/expedientes/{nomina}/evaluar',                               [EvaluacionController::class, 'store'])->name('cca.expedientes.evaluar');
         Route::post('/expedientes/{nomina}/finalizar',                             [EvaluacionController::class, 'finalize'])->name('cca.expedientes.finalizar');
         Route::get('/expedientes/{nomina}/evidencias/{evidencia}/descargar',       [EvaluacionController::class, 'downloadEvidencia'])->name('cca.evidencias.download');
+        Route::get('/expedientes/{nomina}/calificacion-pdf',                         [EvaluacionController::class, 'imprimirCalificacion'])->name('cca.expedientes.calificacion-pdf');
     });
 
     Route::middleware('role:jefe_academico')->prefix('jefe')->group(function () {
