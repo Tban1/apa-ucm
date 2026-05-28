@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AnalistaCCDAController;
 use App\Http\Controllers\ApelacionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
@@ -38,6 +39,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/periodos/{periodo}/cronograma/pdf', [PeriodoController::class, 'imprimirCronograma'])->name('analista.periodos.cronograma.pdf');
 
         Route::patch('/nominas/{nomina}/licencia', [NominaController::class, 'toggleLicencia'])->name('analista.nominas.licencia');
+
+        Route::get('/estado-proceso',           [AnalistaCCDAController::class, 'estadoProceso'])->name('analista.estado-proceso');
+        Route::get('/reporte-calificaciones',   [AnalistaCCDAController::class, 'reporteCalificaciones'])->name('analista.reporte-calificaciones');
+        Route::get('/incumplimientos',          [AnalistaCCDAController::class, 'incumplimientos'])->name('analista.incumplimientos');
     });
 
     Route::middleware('role:secretario')->prefix('secretario')->group(function () {

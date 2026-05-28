@@ -27,6 +27,19 @@ export default function AnalistaCCDA({ stats }) {
                         linkLabel="Registrar período"
                         primary
                     />
+                    <ActionCard
+                        title="Estado del proceso"
+                        description="Visualiza el avance por facultad: expedientes evaluados, pendientes y cierres."
+                        href="/analista/estado-proceso"
+                        linkLabel="Ver estado"
+                    />
+                    <ActionCard
+                        title="Reportes PDF"
+                        description="Genera el reporte consolidado de calificaciones o el listado de incumplimientos."
+                        href="/analista/reporte-calificaciones"
+                        linkLabel="Reporte calificaciones"
+                        external
+                    />
                 </div>
 
             </AppLayout>
@@ -43,23 +56,24 @@ function StatCard({ label, value }) {
     );
 }
 
-function ActionCard({ title, description, href, linkLabel, primary = false }) {
+function ActionCard({ title, description, href, linkLabel, primary = false, external = false }) {
+    const cls = `self-start text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
+        primary
+            ? 'bg-[#1B2D6B] text-white hover:bg-[#152558]'
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+    }`;
+
     return (
         <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-3">
             <div>
                 <p className="font-semibold text-gray-900 text-sm">{title}</p>
                 <p className="text-sm text-gray-500 mt-1">{description}</p>
             </div>
-            <Link
-                href={href}
-                className={`self-start text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
-                    primary
-                        ? 'bg-[#1B2D6B] text-white hover:bg-[#152558]'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-            >
-                {linkLabel}
-            </Link>
+            {external ? (
+                <a href={href} target="_blank" rel="noreferrer" className={cls}>{linkLabel}</a>
+            ) : (
+                <Link href={href} className={cls}>{linkLabel}</Link>
+            )}
         </div>
     );
 }
