@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Apelacion;
 use App\Models\Nomina;
+use App\Models\Notificacion;
 use App\Models\Periodo;
 use Illuminate\Http\Request;
 
@@ -77,6 +78,15 @@ class ApelacionController extends Controller
                 'resolucion'       => $data['resolucion'] ?? null,
                 'fecha_resolucion' => now()->toDateString(),
             ]);
+
+            Notificacion::create([
+                'user_id' => $apelacion->nomina->user_id,
+                'tipo'    => 'apelacion_aprobada',
+                'titulo'  => 'Apelación aprobada',
+                'mensaje' => 'Su apelación fue aprobada. Puede cargar nuevas evidencias para re-evaluación.'
+                           . ($data['resolucion'] ? " Observación: {$data['resolucion']}" : ''),
+            ]);
+
             return back()->with('success', 'Apelación aprobada. El académico puede cargar nuevas evidencias.');
         }
 
@@ -86,6 +96,14 @@ class ApelacionController extends Controller
             'fecha_resolucion' => now()->toDateString(),
         ]);
         $apelacion->nomina->update(['estado' => 'evaluado']);
+
+        Notificacion::create([
+            'user_id' => $apelacion->nomina->user_id,
+            'tipo'    => 'apelacion_rechazada',
+            'titulo'  => 'Apelación rechazada',
+            'mensaje' => 'Su apelación fue rechazada. La calificación original se mantiene.'
+                       . ($data['resolucion'] ? " Resolución: {$data['resolucion']}" : ''),
+        ]);
 
         return back()->with('success', 'Apelación rechazada. El expediente mantiene su calificación original.');
     }

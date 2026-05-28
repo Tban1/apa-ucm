@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CategoriaApa;
 use App\Models\Evidencia;
 use App\Models\Nomina;
+use App\Models\Notificacion;
 use App\Models\Periodo;
 use App\Models\PlazoFacultad;
 use Illuminate\Http\Request;
@@ -246,6 +247,14 @@ class SecretarioController extends Controller
         }
 
         $nomina->update($updates);
+
+        $fechaFormateada = \Carbon\Carbon::parse($data['plazo_licencia'])->format('d/m/Y');
+        Notificacion::create([
+            'user_id' => $nomina->user_id,
+            'tipo'    => 'plazo_licencia',
+            'titulo'  => 'Plazo especial asignado',
+            'mensaje' => "Se le ha asignado un plazo especial de entrega de evidencias hasta el {$fechaFormateada}. Ingrese a su sección de evidencias para cargar sus documentos.",
+        ]);
 
         return back()->with('success', 'Plazo especial actualizado correctamente.');
     }

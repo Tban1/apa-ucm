@@ -1,4 +1,4 @@
-import { usePage, router, Link } from '@inertiajs/react';
+import { usePage, router, Link, Head } from '@inertiajs/react';
 
 const roleLabels = {
     admin:          'Administrador',
@@ -63,6 +63,15 @@ function NavIcon({ type }) {
     return null;
 }
 
+function BellIcon() {
+    return (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+        </svg>
+    );
+}
+
 function LogoutIcon() {
     return (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -74,7 +83,7 @@ function LogoutIcon() {
 
 export default function AppLayout({ title, children }) {
     const page = usePage();
-    const { auth } = page.props;
+    const { auth, notificaciones_no_leidas: nNotif } = page.props;
     const user = auth.user;
     const currentUrl = page.url;
 
@@ -122,6 +131,18 @@ export default function AppLayout({ title, children }) {
                         <div className="w-8 h-8 rounded-full bg-[#0096D6] flex items-center justify-center text-white text-sm font-bold shrink-0">
                             {user.name?.charAt(0).toUpperCase()}
                         </div>
+                        <Link
+                            href="/notificaciones"
+                            title="Notificaciones"
+                            className="relative text-blue-200 hover:text-white transition-colors"
+                        >
+                            <BellIcon />
+                            {nNotif > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white leading-none">
+                                    {nNotif > 9 ? '9+' : nNotif}
+                                </span>
+                            )}
+                        </Link>
                         <button
                             onClick={logout}
                             title="Cerrar sesión"

@@ -7,6 +7,7 @@ use App\Http\Controllers\EvaluacionController;
 use App\Http\Controllers\EvidenciaController;
 use App\Http\Controllers\JefaturaController;
 use App\Http\Controllers\NominaController;
+use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\PeriodoController;
 use App\Http\Controllers\SecretarioController;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,7 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/notificaciones', [NotificacionController::class, 'index'])->name('notificaciones');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'admin'])->name('admin.dashboard');

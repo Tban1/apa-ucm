@@ -8,6 +8,7 @@ use App\Models\Cronograma;
 use App\Models\Evaluacion;
 use App\Models\Evidencia;
 use App\Models\Nomina;
+use App\Models\Notificacion;
 use App\Models\Periodo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -273,6 +274,21 @@ class EvaluacionController extends Controller
         ]);
 
         $nomina->update(['estado' => 'evaluado']);
+
+        $labelCalif = match($calificacion) {
+            'muy_bueno'  => 'Muy Bueno',
+            'bueno'      => 'Bueno',
+            'aceptable'  => 'Aceptable',
+            default      => 'Deficiente',
+        };
+
+        Notificacion::create([
+            'user_id' => $nomina->user_id,
+            'tipo'    => 'calificacion_final',
+            'titulo'  => 'Calificación final registrada',
+            'mensaje' => "La CCA ha registrado su calificación final: {$labelCalif} ({$puntajeTotal}/100)."
+                       . ($esApelacion ? ' (Proceso de apelación)' : ''),
+        ]);
 
         return back()->with('success', 'Calificación final registrada correctamente.');
     }
