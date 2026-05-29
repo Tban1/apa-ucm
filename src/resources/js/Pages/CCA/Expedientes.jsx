@@ -1,17 +1,10 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 
-const ESTADOS = {
-    carga_cerrada: { label: 'Por evaluar',    cls: 'bg-blue-100 text-blue-700' },
-    en_evaluacion: { label: 'En evaluación',  cls: 'bg-purple-100 text-purple-700' },
-    evaluado:      { label: 'Evaluado',       cls: 'bg-green-100 text-green-700' },
-};
-
-const CALIFICACIONES = {
-    muy_bueno:  { label: 'Muy Bueno',  cls: 'text-green-700' },
-    bueno:      { label: 'Bueno',      cls: 'text-blue-700' },
-    aceptable:  { label: 'Aceptable',  cls: 'text-amber-700' },
-    deficiente: { label: 'Deficiente', cls: 'text-red-700' },
+const ESTADO_BADGE = {
+    carga_cerrada: 'bg-blue-100 text-blue-700',
+    en_evaluacion: 'bg-purple-100 text-purple-700',
+    evaluado:      'bg-green-100 text-green-700',
 };
 
 export default function Expedientes({ periodo, expedientes, evaluacionHabilitada, fechaAperturaEval }) {
@@ -33,7 +26,6 @@ export default function Expedientes({ periodo, expedientes, evaluacionHabilitada
                     </div>
                 )}
 
-                {/* Bloqueo por cronograma */}
                 {!evaluacionHabilitada && (
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
                         <p className="text-amber-800 font-semibold text-sm mb-1">
@@ -50,7 +42,9 @@ export default function Expedientes({ periodo, expedientes, evaluacionHabilitada
 
                 {evaluacionHabilitada && expedientes.length === 0 && (
                     <div className="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center">
-                        <p className="text-gray-400 text-sm">No hay expedientes disponibles para evaluación en este período.</p>
+                        <p className="text-gray-400 text-sm">
+                            No hay expedientes validados por el secretario disponibles para evaluación.
+                        </p>
                     </div>
                 )}
 
@@ -60,61 +54,56 @@ export default function Expedientes({ periodo, expedientes, evaluacionHabilitada
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase tracking-wide">
                                     <th className="text-left px-5 py-3 font-medium">Académico</th>
+                                    <th className="text-left px-5 py-3 font-medium">Facultad</th>
+                                    <th className="text-left px-5 py-3 font-medium">Categoría</th>
                                     <th className="text-left px-5 py-3 font-medium">Estado</th>
-                                    <th className="text-center px-5 py-3 font-medium">Evaluaciones</th>
-                                    <th className="text-left px-5 py-3 font-medium">Calificación</th>
                                     <th className="text-left px-5 py-3 font-medium">Mi evaluación</th>
                                     <th className="px-5 py-3" />
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {expedientes.map(exp => {
-                                    const badge = ESTADOS[exp.estado] ?? { label: exp.estado, cls: 'bg-gray-100 text-gray-600' };
-                                    const calif = CALIFICACIONES[exp.calificacion];
-                                    return (
-                                        <tr key={exp.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-5 py-3.5">
-                                                <p className="font-medium text-gray-900">{exp.academico.name}</p>
-                                                <p className="text-xs text-gray-400">{exp.academico.rut}</p>
-                                            </td>
-                                            <td className="px-5 py-3.5">
-                                                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${badge.cls}`}>
-                                                    {badge.label}
-                                                </span>
-                                                {exp.con_licencia && (
-                                                    <span className="ml-1.5 text-xs text-amber-600 font-medium">· Licencia</span>
-                                                )}
-                                            </td>
-                                            <td className="px-5 py-3.5 text-center">
-                                                <span className="text-gray-700 font-semibold">{exp.n_evaluaciones}</span>
-                                            </td>
-                                            <td className="px-5 py-3.5">
-                                                {calif ? (
-                                                    <span className={`font-semibold ${calif.cls}`}>
-                                                        {calif.label} ({exp.puntaje_total} pts)
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-gray-400 text-xs">Pendiente</span>
-                                                )}
-                                            </td>
-                                            <td className="px-5 py-3.5">
-                                                {exp['yo_evalué'] ? (
-                                                    <span className="text-xs text-green-700 font-medium">✓ Registrada</span>
-                                                ) : (
-                                                    <span className="text-xs text-gray-400">Sin registrar</span>
-                                                )}
-                                            </td>
-                                            <td className="px-5 py-3.5 text-right">
-                                                <Link
-                                                    href={`/cca/expedientes/${exp.id}`}
-                                                    className="text-xs font-medium text-[#0096D6] hover:underline"
-                                                >
-                                                    {exp.estado === 'evaluado' ? 'Ver detalle' : 'Evaluar'}
-                                                </Link>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
+                                {expedientes.map(exp => (
+                                    <tr key={exp.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-5 py-3.5">
+                                            <p className="font-medium text-gray-900">{exp.academico.name}</p>
+                                            <p className="text-xs text-gray-400">{exp.academico.rut}</p>
+                                        </td>
+                                        <td className="px-5 py-3.5 text-gray-600">
+                                            {exp.facultad ?? '—'}
+                                        </td>
+                                        <td className="px-5 py-3.5 text-gray-600">
+                                            {exp.categoria ?? '—'}
+                                        </td>
+                                        <td className="px-5 py-3.5">
+                                            <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${ESTADO_BADGE[exp.estado] ?? 'bg-gray-100 text-gray-600'}`}>
+                                                {exp.estado_label}
+                                            </span>
+                                            {exp.con_licencia && (
+                                                <span className="ml-1.5 text-xs text-amber-600">· Licencia</span>
+                                            )}
+                                        </td>
+                                        <td className="px-5 py-3.5">
+                                            {exp.yo_evaluado ? (
+                                                <span className="text-xs text-green-700 font-medium">✓ Registrada</span>
+                                            ) : (
+                                                <span className="text-xs text-gray-400">Pendiente</span>
+                                            )}
+                                            {exp.concepto_final && (
+                                                <p className="text-xs text-gray-500 mt-0.5">
+                                                    Final: {exp.concepto_final} ({exp.nota_final})
+                                                </p>
+                                            )}
+                                        </td>
+                                        <td className="px-5 py-3.5 text-right">
+                                            <Link
+                                                href={`/cca/expedientes/${exp.id}`}
+                                                className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-[#1B2D6B] text-white hover:bg-[#152558] transition-colors"
+                                            >
+                                                {exp.estado === 'evaluado' && exp.yo_evaluado ? 'Ver' : 'Evaluar'}
+                                            </Link>
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>

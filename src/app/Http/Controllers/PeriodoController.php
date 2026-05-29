@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StorePeriodoRequest;
+use App\Jobs\EnviarInicioProcesoJob;
 use App\Models\Cronograma;
 use App\Models\Notificacion;
 use App\Models\Periodo;
@@ -59,27 +60,18 @@ class PeriodoController extends Controller
         });
 
         return redirect()->route('analista.periodos.index')
-            ->with('success', 'Período registrado. Notificaciones enviadas a académicos y secretarios.');
+            ->with('success', 'Período registrado. Notificaciones y correos en cola de envío.');
     }
 
     public function imprimirCronograma(Periodo $periodo)
     {
-        $etiquetas = [
-            'carga_evidencias'      => 'Carga de Evidencias',
-            'evaluacion_secretario' => 'Evaluación Secretario',
-            'evaluacion_cca'        => 'Evaluación CCA',
-            'apelaciones'           => 'Apelaciones',
-            'evaluacion_jefatura'   => 'Evaluación Jefatura',
-            'cierre'                => 'Cierre',
-        ];
-
-        $orden = array_flip(array_keys($etiquetas));
+        $orden = array_flip(Cronograma::ETAPAS);
 
         $cronogramas = $periodo->cronogramas()
             ->get()
             ->sortBy(fn ($c) => $orden[$c->etapa] ?? 99)
             ->map(fn ($c) => [
-                'etapa'        => $etiquetas[$c->etapa] ?? $c->etapa,
+                'etapa'        => Cronograma::etiqueta($c->etapa),
                 'fecha_inicio' => $c->fecha_inicio->format('d/m/Y'),
                 'fecha_fin'    => $c->fecha_fin->format('d/m/Y'),
                 'vigente'      => $c->estaVigente(),
@@ -93,26 +85,35 @@ class PeriodoController extends Controller
     {
         $inicio = \Carbon\Carbon::parse($periodo->fecha_inicio)->format('d/m/Y');
         $cierre = \Carbon\Carbon::parse($periodo->fecha_cierre)->format('d/m/Y');
+        $mensaje = "Se ha registrado el período \"{$periodo->nombre}\". Inicio: {$inicio}. Cierre: {$cierre}.";
 
-        $destinatarios = User::activos()
-            ->whereIn('role', ['academico', 'secretario'])
-            ->pluck('id');
+        // In-app: solo secretarios (los académicos reciben notificación + correo en un solo registro)
+        User::activos()
+            ->deRol('secretario')
+            ->each(fn (User $user) => Notificacion::create([
+                'user_id' => $user->id,
+                'tipo'    => 'inicio_proceso',
+                'titulo'  => "Inicio del proceso CAD {$periodo->anio}",
+                'mensaje' => $mensaje,
+                'leida'   => false,
+                'url'     => null,
+            ]));
 
-        if ($destinatarios->isEmpty()) return;
+        // Email masivo (HU-021): un registro por académico con trazabilidad de envío
+        User::activos()
+            ->deRol('academico')
+            ->each(function (User $academico) use ($periodo, $mensaje) {
+                $notif = Notificacion::create([
+                    'user_id'      => $academico->id,
+                    'tipo'         => 'inicio_proceso',
+                    'titulo'       => "Inicio del proceso CAD {$periodo->anio}",
+                    'mensaje'      => $mensaje,
+                    'leida'        => false,
+                    'url'          => config('app.url'),
+                    'estado_envio' => 'pendiente',
+                ]);
 
-        $now            = now();
-        $notificaciones = $destinatarios->map(fn ($uid) => [
-            'id'         => (string) Str::uuid(),
-            'user_id'    => $uid,
-            'tipo'       => 'inicio_proceso',
-            'titulo'     => "Inicio del proceso APA {$periodo->anio}",
-            'mensaje'    => "Se ha registrado el período \"{$periodo->nombre}\". Inicio: {$inicio}. Cierre: {$cierre}.",
-            'leida'      => false,
-            'url'        => null,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ])->toArray();
-
-        DB::table('notificaciones')->insert($notificaciones);
+                EnviarInicioProcesoJob::dispatch($periodo->id, $academico->id, $notif->id);
+            });
     }
 }

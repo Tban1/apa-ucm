@@ -32,7 +32,7 @@ class SecretarioController extends Controller
         $motivoNoPuede     = null;
 
         if ($periodo && $user->facultad_id) {
-            $expedientes = Nomina::with(['academico', 'apelacion'])
+            $expedientes = Nomina::with(['academico', 'apelacion', 'solicitudes'])
                 ->where('periodo_id', $periodo->id)
                 ->whereHas('academico', fn ($q) => $q->where('facultad_id', $user->facultad_id))
                 ->orderBy('created_at')
@@ -42,6 +42,13 @@ class SecretarioController extends Controller
                     'estado'               => $n->estado,
                     'con_licencia'         => $n->con_licencia,
                     'observacion_licencia' => $n->observacion_licencia,
+                    'tiene_licencia_activa'=> $n->tieneLicenciaMedicaActiva(),
+                    'licencia_pendiente'   => $n->tieneSolicitudLicenciaPendiente(),
+                    'estado_especial'      => $n->tieneLicenciaMedicaActiva()
+                        ? 'Caso especial - Licencia médica'
+                        : ($n->tieneSolicitudLicenciaPendiente()
+                            ? 'Licencia médica — pendiente aprobación CCDA'
+                            : ($n->con_licencia ? 'Caso especial' : null)),
                     'academico'            => [
                         'name' => $n->academico->name,
                         'rut'  => $n->academico->rut,

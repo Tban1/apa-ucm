@@ -15,11 +15,15 @@ class Notificacion extends Model
     protected $fillable = [
         'user_id', 'tipo', 'titulo',
         'mensaje', 'leida', 'url',
+        'estado_envio', 'fecha_envio',
     ];
 
     protected function casts(): array
     {
-        return ['leida' => 'boolean'];
+        return [
+            'leida'       => 'boolean',
+            'fecha_envio' => 'datetime',
+        ];
     }
 
     public function marcarLeida(): void

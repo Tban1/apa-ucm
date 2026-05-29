@@ -21,16 +21,31 @@ class Evaluacion extends Model
 
     protected function casts(): array
     {
-        return ['es_apelacion' => 'boolean'];
+        return [
+            'es_apelacion'          => 'boolean',
+            'puntaje_docencia'      => 'decimal:1',
+            'puntaje_investigacion' => 'decimal:1',
+            'puntaje_vinculacion'   => 'decimal:1',
+            'puntaje_gestion'       => 'decimal:1',
+            'puntaje_formacion'     => 'decimal:1',
+        ];
     }
 
+    public function notaFinalCad(?string $categoriaAcademica): float
+    {
+        return \App\Services\CalificacionCadService::calcularDesdeEvaluacion(
+            $this,
+            $categoriaAcademica
+        );
+    }
+
+    /** @deprecated Use notaFinalCad() — kept for backward compat in views */
     public function puntajeTotal(): int
     {
-        return $this->puntaje_docencia
-             + $this->puntaje_investigacion
-             + $this->puntaje_vinculacion
-             + $this->puntaje_gestion
-             + $this->puntaje_formacion;
+        return (int) round(
+            $this->puntaje_docencia + $this->puntaje_investigacion
+            + $this->puntaje_vinculacion + $this->puntaje_gestion + $this->puntaje_formacion
+        );
     }
 
     public function nomina(): BelongsTo

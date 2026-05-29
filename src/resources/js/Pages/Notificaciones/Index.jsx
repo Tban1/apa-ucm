@@ -7,6 +7,7 @@ const TIPO_ICONS = {
     apelacion_aprobada:  { bg: 'bg-purple-100', text: 'text-purple-600', label: 'Apelación' },
     apelacion_rechazada: { bg: 'bg-red-100',    text: 'text-red-600',    label: 'Apelación' },
     plazo_licencia:      { bg: 'bg-amber-100',  text: 'text-amber-600',  label: 'Licencia' },
+    evaluacion_cca:      { bg: 'bg-indigo-100', text: 'text-indigo-600', label: 'Evaluación CCA' },
 };
 
 export default function NotificacionesIndex({ notificaciones }) {

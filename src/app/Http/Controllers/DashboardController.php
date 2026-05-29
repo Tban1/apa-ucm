@@ -56,18 +56,28 @@ class DashboardController extends Controller
         $user    = auth()->user();
         $periodo = Periodo::where('estado', 'activo')->latest()->first();
 
-        $stats = ['pendientes' => 0, 'en_evaluacion' => 0, 'evaluados' => 0];
+        $stats = [
+            'pendientes'      => 0,
+            'en_evaluacion'   => 0,
+            'evaluados'       => 0,
+            'mis_sin_evaluar' => 0,
+        ];
 
         if ($periodo && $user->facultad_id) {
-            $nominas = Nomina::where('periodo_id', $periodo->id)
+            $nominas = Nomina::with('evaluaciones')
+                ->where('periodo_id', $periodo->id)
                 ->whereHas('academico', fn ($q) => $q->where('facultad_id', $user->facultad_id))
                 ->whereIn('estado', ['carga_cerrada', 'en_evaluacion', 'evaluado'])
-                ->get(['estado']);
+                ->get();
 
             $stats = [
-                'pendientes'    => $nominas->where('estado', 'carga_cerrada')->count(),
-                'en_evaluacion' => $nominas->where('estado', 'en_evaluacion')->count(),
-                'evaluados'     => $nominas->where('estado', 'evaluado')->count(),
+                'pendientes'      => $nominas->where('estado', 'carga_cerrada')->count(),
+                'en_evaluacion'   => $nominas->where('estado', 'en_evaluacion')->count(),
+                'evaluados'       => $nominas->where('estado', 'evaluado')->count(),
+                'mis_sin_evaluar' => $nominas
+                    ->filter(fn (Nomina $n) => $n->estado !== 'evaluado'
+                        && !$n->evaluaciones->contains('evaluador_id', $user->id))
+                    ->count(),
             ];
         }
 

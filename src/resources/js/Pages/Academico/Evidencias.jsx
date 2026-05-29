@@ -115,6 +115,19 @@ function EstadoBanner({ periodo, nomina, plazo, puedeCargar }) {
 
     return (
         <>
+            {/* Plazo individual (reincorporación / extensión) */}
+            {!nomina?.con_licencia && nomina?.plazo_licencia && (
+                <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-5 py-4">
+                    <p className="text-sm font-semibold text-blue-800">Plazo especial de carga de evidencias</p>
+                    <p className={`text-sm font-medium mt-1 ${plazoLicenciaVigente ? 'text-green-700' : 'text-red-700'}`}>
+                        Fecha límite: <span className="font-bold">{formatDate(nomina.plazo_licencia)}</span>
+                        <span className="ml-1.5 text-xs font-normal">
+                            ({plazoLicenciaVigente ? 'vigente' : 'vencido'})
+                        </span>
+                    </p>
+                </div>
+            )}
+
             {/* Banner de licencia médica */}
             {nomina?.con_licencia && (
                 <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">

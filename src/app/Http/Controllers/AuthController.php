@@ -29,7 +29,7 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect($this->dashboardRoute(Auth::user()->role));
+        return redirect(self::dashboardRouteFor(Auth::user()->role));
     }
 
     public function logout(Request $request)
@@ -41,7 +41,7 @@ class AuthController extends Controller
         return redirect()->route('login');
     }
 
-    private function dashboardRoute(string $role): string
+    public static function dashboardRouteFor(?string $role): string
     {
         return match ($role) {
             'admin'          => route('admin.dashboard'),
@@ -52,5 +52,10 @@ class AuthController extends Controller
             'academico'      => route('academico.dashboard'),
             default          => route('login'),
         };
+    }
+
+    private function dashboardRoute(string $role): string
+    {
+        return self::dashboardRouteFor($role);
     }
 }
