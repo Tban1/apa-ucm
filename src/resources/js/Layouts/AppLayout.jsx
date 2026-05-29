@@ -16,11 +16,13 @@ const navByRole = {
     analista_ccda: [
         { label: 'Dashboard',      href: '/analista/dashboard',      icon: 'grid' },
         { label: 'Períodos',       href: '/analista/periodos',       icon: 'calendar' },
+        { label: 'Solicitudes',    href: '/analista/solicitudes',    icon: 'folder' },
         { label: 'Estado proceso', href: '/analista/estado-proceso', icon: 'chart' },
     ],
     secretario: [
         { label: 'Dashboard',   href: '/secretario/dashboard',   icon: 'grid' },
         { label: 'Expedientes', href: '/secretario/expedientes', icon: 'folder' },
+        { label: 'Solicitudes', href: '/secretario/solicitudes', icon: 'folder' },
     ],
     miembro_cca: [
         { label: 'Dashboard',   href: '/cca/dashboard',   icon: 'grid' },
@@ -102,7 +104,7 @@ export default function AppLayout({ title, children }) {
     }
 
     return (
-        <div className="min-h-screen flex flex-col bg-gray-50">
+        <div className="fixed inset-0 flex flex-col overflow-hidden bg-gray-50">
 
             {/* Header */}
             <header className="bg-[#1B2D6B] shadow-md z-20 shrink-0">
@@ -162,11 +164,11 @@ export default function AppLayout({ title, children }) {
                 </div>
             </header>
 
-            <div className="flex flex-1 overflow-hidden">
+            <div className="flex min-h-0 flex-1 overflow-hidden">
 
-                {/* Sidebar */}
-                <aside className="w-56 bg-[#152558] flex flex-col shrink-0 z-10">
-                    <nav className="flex-1 px-3 py-5 space-y-1">
+                {/* Sidebar — altura fija al viewport; sin scroll propio salvo menú largo */}
+                <aside className="flex h-full w-56 shrink-0 flex-col bg-[#152558] z-10">
+                    <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-5 space-y-1">
                         <p className="text-blue-300 text-[10px] font-semibold uppercase tracking-widest px-3 mb-3 opacity-50">
                             Menú
                         </p>
@@ -193,7 +195,7 @@ export default function AppLayout({ title, children }) {
                         })}
                     </nav>
 
-                    <div className="px-4 py-4 border-t border-white/10">
+                    <div className="shrink-0 px-4 py-4 border-t border-white/10">
                         <p className="text-blue-300 text-[10px] opacity-40 leading-snug">
                             © {new Date().getFullYear()} UCM<br />
                             Vicerrectoría Académica
@@ -201,9 +203,9 @@ export default function AppLayout({ title, children }) {
                     </div>
                 </aside>
 
-                {/* Contenido principal */}
-                <main className="flex-1 overflow-auto">
-                    <div className="p-6 sm:p-8 max-w-6xl">
+                {/* Contenido principal — único scroll de la página */}
+                <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-gray-50">
+                    <div className="min-h-full w-full p-6 sm:p-8">
                         {title && (
                             <h1 className="text-xl font-bold text-gray-900 mb-6 tracking-tight">
                                 {title}

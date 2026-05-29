@@ -18,6 +18,9 @@ class User extends Authenticatable
         'name', 'email', 'email_verified_at', 'password',
         'rut', 'telefono', 'facultad_id', 'departamento_id',
         'role', 'activo',
+        'categoria_academica', 'linea_desarrollo', 'fecha_jerarquizacion',
+        'horas_contrato_isem', 'horas_contrato_iisem',
+        'nota_anterior', 'concepto_anterior',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -25,9 +28,11 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
-            'activo'            => 'boolean',
+            'email_verified_at'     => 'datetime',
+            'password'              => 'hashed',
+            'activo'                => 'boolean',
+            'fecha_jerarquizacion'  => 'date',
+            'nota_anterior'         => 'decimal:2',
         ];
     }
 
@@ -78,6 +83,14 @@ class User extends Authenticatable
     public function notificaciones(): HasMany
     {
         return $this->hasMany(Notificacion::class);
+    }
+
+    public function tieneLicenciaMedicaActiva(): bool
+    {
+        return Solicitud::whereHas('nomina', fn ($q) => $q->where('user_id', $this->id))
+            ->where('tipo', 'licencia_medica')
+            ->where('estado', 'activa')
+            ->exists();
     }
 
     // ── Scopes ───────────────────────────────────────────────────────────

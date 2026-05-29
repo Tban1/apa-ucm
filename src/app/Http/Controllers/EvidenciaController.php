@@ -46,12 +46,14 @@ class EvidenciaController extends Controller
 
         $cerradoFormalmente = $plazo['cerrado'] ?? false;
 
-        if ($nomina && $nomina->con_licencia) {
-            $plazoLicencia = $nomina->plazo_licencia;
+        $plazoIndividualVigente = $nomina
+            && $nomina->plazo_licencia
+            && $nomina->plazo_licencia->toDateString() >= now()->toDateString();
+
+        if ($nomina && ($nomina->con_licencia || $plazoIndividualVigente)) {
             $puedeCargar = $nomina->puedeCargarEvidencias()
                 && !$cerradoFormalmente
-                && $plazoLicencia !== null
-                && $plazoLicencia->toDateString() >= now()->toDateString();
+                && $plazoIndividualVigente;
         } else {
             $puedeCargar = $nomina
                 && $nomina->puedeCargarEvidencias()
@@ -150,10 +152,10 @@ class EvidenciaController extends Controller
             return back()->with('error', 'La recepción de evidencias fue cerrada formalmente. No se aceptan nuevas cargas.');
         }
 
-        if ($nomina->con_licencia) {
-            if (!$nomina->plazo_licencia || $nomina->plazo_licencia->toDateString() < now()->toDateString()) {
-                return back()->with('error', 'No tiene un plazo especial activo. Contacte a su secretario de facultad.');
-            }
+        if ($nomina->plazo_licencia && $nomina->plazo_licencia->toDateString() >= now()->toDateString()) {
+            // Plazo individual (reincorporación o extensión): independiente del plazo de facultad
+        } elseif ($nomina->con_licencia) {
+            return back()->with('error', 'No tiene un plazo especial activo. Contacte a su secretario de facultad.');
         } elseif ($plazoRecord && !$plazoRecord->estaVigente()) {
             return back()->with('error', 'El plazo de carga de evidencias ha vencido.');
         }

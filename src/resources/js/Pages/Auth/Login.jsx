@@ -16,7 +16,7 @@ export default function Login() {
         <>
             <Head title="Iniciar sesión — Sistema APA UCM" />
 
-            <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#1B2D6B] via-[#0F1E4A] to-[#0a1535] relative overflow-hidden">
+            <div className="flex h-full items-center justify-center p-4 bg-gradient-to-br from-[#1B2D6B] via-[#0F1E4A] to-[#0a1535] relative overflow-hidden">
 
                 {/* Círculos decorativos de fondo */}
                 <div className="absolute -top-20 -left-20 w-80 h-80 rounded-full bg-[#0096D6] opacity-10 pointer-events-none" />

@@ -390,15 +390,25 @@ export default function Expedientes({ periodo, expedientes, plazo, actaCierre, p
                                                 </span>
                                             </td>
                                             <td className="px-5 py-3">
-                                                {e.con_licencia ? (
+                                                {e.tiene_licencia_activa || e.licencia_pendiente || e.estado_especial ? (
                                                     <div>
-                                                        <span className="inline-block text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
-                                                            Caso especial
+                                                        <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full border ${
+                                                            e.tiene_licencia_activa
+                                                                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                                                : 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                                                        }`}>
+                                                            {e.estado_especial ?? 'Caso especial'}
                                                         </span>
                                                         {e.observacion_licencia && (
-                                                            <p className="text-xs text-gray-400 mt-0.5">{e.observacion_licencia}</p>
+                                                            <p className="text-xs text-gray-400 mt-0.5 max-w-xs truncate" title={e.observacion_licencia}>
+                                                                {e.observacion_licencia}
+                                                            </p>
                                                         )}
                                                     </div>
+                                                ) : e.con_licencia ? (
+                                                    <span className="inline-block text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
+                                                        Caso especial
+                                                    </span>
                                                 ) : (
                                                     <span className="text-gray-300">—</span>
                                                 )}

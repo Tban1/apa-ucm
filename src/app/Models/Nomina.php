@@ -70,7 +70,16 @@ class Nomina extends Model
 
     public function calificacionFinal(): HasOne
     {
-        return $this->hasOne(CalificacionFinal::class)->latestOfMany();
+        return $this->hasOne(CalificacionFinal::class)
+            ->whereRaw(
+                '"calificaciones_finales"."id" = (
+                    SELECT cf.id
+                    FROM calificaciones_finales cf
+                    WHERE cf.nomina_id = "calificaciones_finales"."nomina_id"
+                    ORDER BY cf.created_at DESC
+                    LIMIT 1
+                )'
+            );
     }
 
     public function calificacionJefatura(): HasOne
@@ -80,7 +89,69 @@ class Nomina extends Model
 
     public function apelacion(): HasOne
     {
-        return $this->hasOne(Apelacion::class)->latestOfMany();
+        return $this->hasOne(Apelacion::class)
+            ->whereRaw(
+                '"apelaciones"."id" = (
+                    SELECT a.id
+                    FROM apelaciones a
+                    WHERE a.nomina_id = "apelaciones"."nomina_id"
+                    ORDER BY a.created_at DESC
+                    LIMIT 1
+                )'
+            );
+    }
+
+    public function solicitudes(): HasMany
+    {
+        return $this->hasMany(Solicitud::class);
+    }
+
+    public function solicitudActiva(string $tipo = 'licencia_medica'): ?Solicitud
+    {
+        return $this->solicitudes()
+            ->where('tipo', $tipo)
+            ->where('estado', 'activa')
+            ->latest()
+            ->first();
+    }
+
+    public function tieneLicenciaMedicaActiva(): bool
+    {
+        return $this->solicitudActiva('licencia_medica') !== null;
+    }
+
+    public function estadoReporte(): string
+    {
+        $licencia = $this->solicitudActiva('licencia_medica');
+        if ($licencia) {
+            $hasta = $licencia->fecha_fin?->format('d/m/Y') ?? 'indefinido';
+
+            return "Pendiente - Licencia hasta {$hasta}";
+        }
+
+        $pendiente = $this->solicitudes()
+            ->where('tipo', 'licencia_medica')
+            ->where('estado', 'pendiente_aprobacion')
+            ->latest()
+            ->first();
+
+        if ($pendiente) {
+            return 'Pendiente - Licencia (aprobación CCDA)';
+        }
+
+        if (in_array($this->estado, ['evaluado', 'cerrado'])) {
+            return 'Evaluado';
+        }
+
+        return 'Sin evaluar';
+    }
+
+    public function tieneSolicitudLicenciaPendiente(): bool
+    {
+        return $this->solicitudes()
+            ->where('tipo', 'licencia_medica')
+            ->where('estado', 'pendiente_aprobacion')
+            ->exists();
     }
 
     // ── Scopes ───────────────────────────────────────────────────────────

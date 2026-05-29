@@ -13,7 +13,7 @@ class CalificacionFinal extends Model
     protected $table = 'calificaciones_finales';
 
     protected $fillable = [
-        'nomina_id', 'puntaje_total', 'calificacion',
+        'nomina_id', 'puntaje_total', 'nota_final', 'calificacion',
         'determinada_por', 'fecha', 'observacion', 'es_apelacion',
     ];
 
@@ -22,6 +22,7 @@ class CalificacionFinal extends Model
         return [
             'fecha'        => 'date',
             'es_apelacion' => 'boolean',
+            'nota_final'   => 'decimal:2',
         ];
     }
 
@@ -30,13 +31,7 @@ class CalificacionFinal extends Model
      */
     public function calificacionLabel(): string
     {
-        return match($this->calificacion) {
-            'muy_bueno'  => 'Muy Bueno',
-            'bueno'      => 'Bueno',
-            'aceptable'  => 'Aceptable',
-            'deficiente' => 'Deficiente',
-            default      => $this->calificacion,
-        };
+        return \App\Services\CalificacionCadService::labelConcepto($this->calificacion);
     }
 
     public function nomina(): BelongsTo

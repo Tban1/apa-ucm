@@ -3,24 +3,49 @@ import AppLayout from '@/Layouts/AppLayout';
 
 const ETAPAS = [
     { value: 'carga_evidencias',      label: 'Carga de Evidencias' },
-    { value: 'evaluacion_secretario', label: 'Evaluación Secretario' },
+    { value: 'evaluacion_secretario', label: 'Validación Secretario' },
     { value: 'evaluacion_cca',        label: 'Evaluación CCA' },
     { value: 'apelaciones',           label: 'Apelaciones' },
     { value: 'evaluacion_jefatura',   label: 'Evaluación Jefatura' },
     { value: 'cierre',                label: 'Cierre' },
 ];
 
+const ETAPAS_PARALELAS = new Set([
+    'carga_evidencias',
+    'evaluacion_secretario',
+    'evaluacion_jefatura',
+]);
+
+const INICIO_SECUENCIAL = {
+    evaluacion_cca:  'carga_evidencias',
+    apelaciones:     'evaluacion_cca',
+    cierre:          'apelaciones',
+};
+
 export default function PeriodoCreate() {
     const { data, setData, post, processing, errors } = useForm({
         nombre:       '',
         fecha_inicio: '',
         fecha_cierre: '',
-        cronograma:   ETAPAS.map(e => ({ etapa: e.value, fecha_inicio: '', fecha_fin: '' })),
+        cronograma:   ETAPAS.map(e => ({ etapa: e.value, fecha_fin: '' })),
     });
 
-    function setCronograma(index, field, value) {
+    function finEtapa(etapa) {
+        return data.cronograma.find(c => c.etapa === etapa)?.fecha_fin || '';
+    }
+
+    function minFinEtapa(etapa) {
+        if (ETAPAS_PARALELAS.has(etapa)) {
+            return data.fecha_inicio || undefined;
+        }
+
+        const etapaPrevia = INICIO_SECUENCIAL[etapa];
+        return finEtapa(etapaPrevia) || data.fecha_inicio || undefined;
+    }
+
+    function setCronograma(index, value) {
         const updated = data.cronograma.map((item, i) =>
-            i === index ? { ...item, [field]: value } : item
+            i === index ? { ...item, fecha_fin: value } : item
         );
         setData('cronograma', updated);
     }
@@ -37,7 +62,7 @@ export default function PeriodoCreate() {
             <Head title="Registrar Período" />
             <AppLayout title="Registrar Período Académico">
 
-                <form onSubmit={submit} className="space-y-8 max-w-3xl">
+                <form onSubmit={submit} className="w-full space-y-8">
 
                     {/* Información básica */}
                     <section className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
@@ -93,54 +118,36 @@ export default function PeriodoCreate() {
                             Cronograma de etapas
                         </h2>
                         <p className="text-xs text-gray-400 mb-5">
-                            Todas las etapas inician en paralelo desde el comienzo del período. Defina solo la fecha de cierre de cada una.
+                            La carga de evidencias, la validación del secretario y la evaluación de jefatura
+                            inician al comienzo del período. La evaluación CCA, apelaciones y cierre son
+                            secuenciales y se habilitan automáticamente al cerrar la etapa anterior. Defina
+                            la fecha de cierre de cada etapa.
                         </p>
 
                         {errors.cronograma && (
                             <p className="mb-4 text-xs text-red-600">{errors.cronograma}</p>
                         )}
 
-                        <div className="space-y-4">
-                            {ETAPAS.map((etapa, i) => {
-                                const minInicio = data.fecha_inicio || undefined;
-                                const minFin    = data.cronograma[i].fecha_inicio || minInicio;
-
-                                return (
-                                    <div key={etapa.value}>
-                                        <p className="text-sm font-medium text-gray-700 mb-2">{etapa.label}</p>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-xs text-gray-500 mb-1">Inicio</label>
-                                                <input
-                                                    type="date"
-                                                    value={data.cronograma[i].fecha_inicio}
-                                                    min={minInicio}
-                                                    max={data.fecha_cierre || undefined}
-                                                    onChange={e => setCronograma(i, 'fecha_inicio', e.target.value)}
-                                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2D6B]/30 focus:border-[#1B2D6B]"
-                                                />
-                                                {cronError(i, 'fecha_inicio') && (
-                                                    <p className="mt-1 text-xs text-red-600">{cronError(i, 'fecha_inicio')}</p>
-                                                )}
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs text-gray-500 mb-1">Fin</label>
-                                                <input
-                                                    type="date"
-                                                    value={data.cronograma[i].fecha_fin}
-                                                    min={minFin}
-                                                    max={data.fecha_cierre || undefined}
-                                                    onChange={e => setCronograma(i, 'fecha_fin', e.target.value)}
-                                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2D6B]/30 focus:border-[#1B2D6B]"
-                                                />
-                                                {cronError(i, 'fecha_fin') && (
-                                                    <p className="mt-1 text-xs text-red-600">{cronError(i, 'fecha_fin')}</p>
-                                                )}
-                                            </div>
-                                        </div>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            {ETAPAS.map((etapa, i) => (
+                                <div key={etapa.value} className="rounded-lg border border-gray-100 bg-gray-50/80 p-4">
+                                    <p className="text-sm font-medium text-gray-700 mb-2">{etapa.label}</p>
+                                    <div>
+                                        <label className="block text-xs text-gray-500 mb-1">Fin</label>
+                                        <input
+                                            type="date"
+                                            value={data.cronograma[i].fecha_fin}
+                                            min={minFinEtapa(etapa.value)}
+                                            max={data.fecha_cierre || undefined}
+                                            onChange={e => setCronograma(i, e.target.value)}
+                                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1B2D6B]/30 focus:border-[#1B2D6B]"
+                                        />
+                                        {cronError(i, 'fecha_fin') && (
+                                            <p className="mt-1 text-xs text-red-600">{cronError(i, 'fecha_fin')}</p>
+                                        )}
                                     </div>
-                                );
-                            })}
+                                </div>
+                            ))}
                         </div>
                     </section>
 

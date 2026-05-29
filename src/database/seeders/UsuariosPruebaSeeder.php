@@ -49,11 +49,19 @@ class UsuariosPruebaSeeder extends Seeder
                 'name'        => 'Académico Prueba',
                 'role'        => 'academico',
                 'facultad_id' => $fci?->id,
+                'rut'         => '11.111.111-1',
+                'categoria_academica'   => 'adjunto',
+                'linea_desarrollo'      => 'docente',
+                'fecha_jerarquizacion'  => '2018-03-15',
+                'horas_contrato_isem'   => 18,
+                'horas_contrato_iisem'  => 18,
+                'nota_anterior'         => 4.2,
+                'concepto_anterior'     => 'Muy Bueno',
             ],
         ];
 
         foreach ($usuarios as $datos) {
-            User::firstOrCreate(
+            User::updateOrCreate(
                 ['email' => $datos['email']],
                 array_merge($datos, ['password' => Hash::make('password')])
             );

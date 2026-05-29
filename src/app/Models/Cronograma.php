@@ -10,6 +10,24 @@ class Cronograma extends Model
 {
     use HasUuids;
 
+    public const ETAPAS = [
+        'carga_evidencias',
+        'evaluacion_secretario',
+        'evaluacion_cca',
+        'apelaciones',
+        'evaluacion_jefatura',
+        'cierre',
+    ];
+
+    public const ETIQUETAS = [
+        'carga_evidencias'      => 'Carga de Evidencias',
+        'evaluacion_secretario' => 'Validación Secretario',
+        'evaluacion_cca'        => 'Evaluación CCA',
+        'apelaciones'           => 'Apelaciones',
+        'evaluacion_jefatura'   => 'Evaluación Jefatura',
+        'cierre'                => 'Cierre',
+    ];
+
     protected $fillable = [
         'periodo_id', 'etapa', 'fecha_inicio', 'fecha_fin',
     ];
@@ -38,6 +56,42 @@ class Cronograma extends Model
     public function esFutura(): bool
     {
         return $this->fecha_inicio->isFuture();
+    }
+
+    /**
+     * Calcula la fecha de inicio de una etapa según la lógica del proceso CAD.
+     *
+     * @param  array<string, string>  $finesPorEtapa  Mapa etapa => fecha_fin (Y-m-d)
+     */
+    public static function calcularFechaInicio(string $etapa, string $periodoInicio, array $finesPorEtapa): string
+    {
+        return match ($etapa) {
+            'carga_evidencias', 'evaluacion_secretario', 'evaluacion_jefatura' => $periodoInicio,
+            'evaluacion_cca'  => $finesPorEtapa['carga_evidencias'],
+            'apelaciones'     => $finesPorEtapa['evaluacion_cca'],
+            'cierre'          => $finesPorEtapa['apelaciones'],
+            default           => throw new \InvalidArgumentException("Etapa desconocida: {$etapa}"),
+        };
+    }
+
+    /**
+     * @param  array<int, array{etapa: string, fecha_fin: string}>  $entradas
+     * @return array<int, array{etapa: string, fecha_inicio: string, fecha_fin: string}>
+     */
+    public static function prepararParaGuardar(string $periodoInicio, array $entradas): array
+    {
+        $finesPorEtapa = collect($entradas)->pluck('fecha_fin', 'etapa')->all();
+
+        return collect($entradas)->map(fn (array $entry) => [
+            'etapa'        => $entry['etapa'],
+            'fecha_inicio' => self::calcularFechaInicio($entry['etapa'], $periodoInicio, $finesPorEtapa),
+            'fecha_fin'    => $entry['fecha_fin'],
+        ])->all();
+    }
+
+    public static function etiqueta(string $etapa): string
+    {
+        return self::ETIQUETAS[$etapa] ?? $etapa;
     }
 
     // ── Relaciones ───────────────────────────────────────────────────────
