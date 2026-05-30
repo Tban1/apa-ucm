@@ -164,14 +164,26 @@ export default function EvaluarExpediente({
 
                 {calificacionFinal && (
                     <div className="bg-green-50 border border-green-200 rounded-xl p-5 mb-6">
-                        <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">Calificación Final</p>
-                        <p className="text-2xl font-bold text-green-800">
-                            {calificacionFinal.concepto_label} — {calificacionFinal.nota_final} / 5.0
-                        </p>
-                        <p className="text-xs text-green-600 mt-1">Registrada el {calificacionFinal.fecha}</p>
-                        {calificacionFinal.observacion && (
-                            <p className="text-sm text-green-700 mt-2">{calificacionFinal.observacion}</p>
-                        )}
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">Calificación Final</p>
+                                <p className="text-2xl font-bold text-green-800">
+                                    {calificacionFinal.concepto_label} — {calificacionFinal.nota_final} / 5.0
+                                </p>
+                                <p className="text-xs text-green-600 mt-1">Registrada el {calificacionFinal.fecha}</p>
+                                {calificacionFinal.observacion && (
+                                    <p className="text-sm text-green-700 mt-2">{calificacionFinal.observacion}</p>
+                                )}
+                            </div>
+                            <a
+                                href={`/cca/expedientes/${nomina.id}/calificacion-pdf`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 bg-[#1B2D6B] text-white text-xs font-medium rounded-lg hover:bg-[#152558] transition-colors"
+                            >
+                                ↓ Informe PDF
+                            </a>
+                        </div>
                     </div>
                 )}
 

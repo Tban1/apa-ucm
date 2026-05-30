@@ -2,287 +2,447 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Informe de Calificación CCA — {{ $nomina->academico->name }}</title>
+    <title>Informe de Calificación — {{ $academico->name }}</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: Arial, sans-serif;
-            font-size: 12px;
+            font-size: 11px;
             color: #111;
             background: #fff;
-            padding: 30px 40px;
+            padding: 28px 36px;
         }
 
-        .header {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            border-bottom: 2px solid #1B2D6B;
-            padding-bottom: 14px;
+        /* ── Botón imprimir ─────────────────────── */
+        .btn-print {
+            display: inline-block;
+            background: #1B2D6B;
+            color: #fff;
+            padding: 7px 18px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
             margin-bottom: 20px;
         }
-
-        .header-title h1 {
-            font-size: 16px;
-            font-weight: bold;
-            color: #1B2D6B;
+        @media print {
+            .btn-print { display: none; }
+            body { padding: 10px 18px; }
         }
 
-        .header-title p {
-            font-size: 11px;
-            color: #555;
-            margin-top: 2px;
-        }
-
-        .header-meta {
-            text-align: right;
-            font-size: 11px;
-            color: #555;
-        }
-
-        .section {
-            margin-bottom: 18px;
-        }
-
-        .section-title {
-            font-size: 12px;
-            font-weight: bold;
-            color: #1B2D6B;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 4px;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px 20px;
-        }
-
-        .info-row {
+        /* ── Cabecera ───────────────────────────── */
+        .header {
             display: flex;
-            gap: 6px;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 3px solid #1B2D6B;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
         }
-
-        .info-label {
-            font-weight: bold;
-            color: #444;
-            min-width: 100px;
-        }
-
-        .calificacion-box {
-            display: inline-block;
-            background: #f0f4ff;
-            border: 1px solid #1B2D6B;
-            border-radius: 6px;
-            padding: 12px 30px;
-            text-align: center;
-            margin-bottom: 10px;
-        }
-
-        .calificacion-box .calificacion-label {
-            font-size: 22px;
+        .header h1 {
+            font-size: 14px;
             font-weight: bold;
             color: #1B2D6B;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
         }
-
-        .calificacion-box .calificacion-pts {
-            font-size: 13px;
-            color: #555;
-            margin-top: 4px;
-        }
-
-        .table-eval {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
-        }
-
-        .table-eval th {
-            background: #f4f6fb;
-            border: 1px solid #ddd;
-            padding: 5px 8px;
-            text-align: left;
-            color: #333;
-            font-weight: bold;
-        }
-
-        .table-eval td {
-            border: 1px solid #eee;
-            padding: 5px 8px;
-            color: #444;
-        }
-
-        .table-eval tr:nth-child(even) td {
-            background: #fafafa;
-        }
-
-        .observacion-box {
-            background: #f9f9f9;
-            border-left: 3px solid #1B2D6B;
-            padding: 8px 12px;
-            color: #333;
-            line-height: 1.6;
-        }
+        .header p { font-size: 10px; color: #555; margin-top: 3px; }
+        .header-meta { text-align: right; font-size: 10px; color: #444; line-height: 1.6; }
 
         .badge-apelacion {
             display: inline-block;
             background: #fff3cd;
             border: 1px solid #ffc107;
             color: #856404;
-            border-radius: 4px;
-            padding: 2px 8px;
+            border-radius: 3px;
+            padding: 1px 7px;
+            font-size: 9px;
+            font-weight: bold;
+            vertical-align: middle;
+            margin-left: 6px;
+        }
+
+        /* ── Grilla de datos académicos ─────────── */
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            border: 1px solid #aaa;
+            margin-bottom: 12px;
+        }
+        .profile-cell {
+            border: 1px solid #bbb;
+            padding: 0;
+        }
+        .profile-cell .cell-label {
+            background: #1B2D6B;
+            color: #fff;
+            font-size: 9px;
+            font-weight: bold;
+            text-align: center;
+            padding: 3px 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .profile-cell .cell-value {
+            text-align: center;
+            padding: 4px 4px;
+            font-size: 11px;
+        }
+        .profile-cell.span2 { grid-column: span 2; }
+        .profile-cell.span4 { grid-column: span 4; }
+
+        /* ── Sección reglamento ─────────────────── */
+        .reglamento-box {
+            border: 1px solid #1B2D6B;
+            margin-bottom: 12px;
+        }
+        .reglamento-box .reg-title {
+            background: #1B2D6B;
+            color: #fff;
             font-size: 10px;
             font-weight: bold;
-            margin-left: 8px;
-        }
-
-        .firma-section {
-            margin-top: 50px;
-            display: flex;
-            gap: 60px;
-        }
-
-        .firma-box {
-            flex: 1;
             text-align: center;
+            padding: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
-
-        .firma-line {
-            border-top: 1px solid #555;
-            margin-bottom: 4px;
-        }
-
-        .firma-label {
+        .reglamento-box .reg-body {
+            padding: 7px 10px;
             font-size: 10px;
-            color: #555;
+            line-height: 1.55;
+            color: #222;
+            font-style: italic;
         }
 
-        .btn-print {
-            display: inline-block;
+        /* ── Títulos de sección ─────────────────── */
+        .section-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: #1B2D6B;
+            border-bottom: 1px solid #1B2D6B;
+            padding-bottom: 3px;
+            margin-bottom: 8px;
+            margin-top: 14px;
+        }
+
+        /* ── Tabla de áreas ─────────────────────── */
+        .table-areas {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+            margin-bottom: 6px;
+        }
+        .table-areas th {
             background: #1B2D6B;
-            color: white;
-            padding: 8px 20px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-            font-size: 13px;
-            margin-bottom: 24px;
+            color: #fff;
+            border: 1px solid #1B2D6B;
+            padding: 4px 6px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .table-areas th.left { text-align: left; }
+        .table-areas td {
+            border: 1px solid #ccc;
+            padding: 4px 6px;
+            text-align: center;
+            color: #333;
+        }
+        .table-areas td.left { text-align: left; }
+        .table-areas tr:nth-child(even) td { background: #f5f7ff; }
+        .table-areas .row-final td {
+            background: #e8ecf8;
+            font-weight: bold;
+            color: #1B2D6B;
+        }
+        .table-areas .col-num { width: 24px; }
+        .table-areas .col-area { width: auto; }
+        .table-areas .col-hrs  { width: 52px; }
+        .table-areas .col-pct  { width: 52px; }
+        .table-areas .col-nota { width: 44px; }
+        .table-areas .col-conc { width: 70px; }
+        .table-areas .col-pond { width: 60px; }
+
+        .table-note {
+            font-size: 9px;
+            color: #555;
+            margin-top: 3px;
+            font-style: italic;
         }
 
-        @media print {
-            .btn-print { display: none; }
-            body { padding: 15px 20px; }
+        /* ── Interpretación / Retroalimentación ─── */
+        .interp-box {
+            border-left: 3px solid #1B2D6B;
+            background: #f5f7ff;
+            padding: 8px 12px;
+            font-size: 10.5px;
+            line-height: 1.6;
+            color: #222;
+            margin-bottom: 8px;
         }
+        .interp-box strong { color: #1B2D6B; }
+
+        .retro-box {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 10.5px;
+            line-height: 1.6;
+            color: #333;
+            background: #fafafa;
+            margin-bottom: 8px;
+        }
+
+        .eval-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+            margin-top: 6px;
+        }
+        .eval-table th {
+            background: #e8ecf8;
+            border: 1px solid #bbb;
+            padding: 3px 6px;
+            text-align: left;
+            color: #1B2D6B;
+            font-weight: bold;
+        }
+        .eval-table td {
+            border: 1px solid #ddd;
+            padding: 3px 6px;
+            color: #444;
+        }
+
+        /* ── Firmas ─────────────────────────────── */
+        .firma-section {
+            display: flex;
+            gap: 40px;
+            margin-top: 50px;
+        }
+        .firma-box { flex: 1; text-align: center; }
+        .firma-line { border-top: 1px solid #555; margin-bottom: 4px; }
+        .firma-label { font-size: 9px; color: #555; }
     </style>
 </head>
 <body>
 
 <button class="btn-print" onclick="window.print()">Imprimir / Guardar como PDF</button>
 
+{{-- ── CABECERA ────────────────────────────────────────── --}}
 <div class="header">
-    <div class="header-title">
+    <div>
         <h1>
-            Informe de Calificación Académica — CCA
+            Informe de Calificación Académica
             @if ($calificacion->es_apelacion)
                 <span class="badge-apelacion">Apelación</span>
             @endif
         </h1>
-        <p>Universidad Católica del Maule — Comisión Calificadora Académica</p>
+        <p>Universidad Católica del Maule — Comisión Calificadora Académica (CCA)</p>
     </div>
     <div class="header-meta">
-        <p><strong>Período:</strong> {{ $periodo->nombre }} {{ $periodo->anio }}</p>
-        <p><strong>Fecha emisión:</strong> {{ now()->format('d/m/Y') }}</p>
+        <div><strong>Período:</strong> {{ $periodo->nombre }} {{ $periodo->anio }}</div>
+        <div><strong>Fecha de emisión:</strong> {{ now()->format('d/m/Y') }}</div>
     </div>
 </div>
 
-{{-- Datos del académico --}}
-<div class="section">
-    <p class="section-title">Datos del Académico</p>
-    <div class="info-grid">
-        <div class="info-row">
-            <span class="info-label">Nombre:</span>
-            <span>{{ $nomina->academico->name }}</span>
-        </div>
-        <div class="info-row">
-            <span class="info-label">RUT:</span>
-            <span>{{ $nomina->academico->rut }}</span>
-        </div>
-        <div class="info-row">
-            <span class="info-label">Correo:</span>
-            <span>{{ $nomina->academico->email }}</span>
-        </div>
-        <div class="info-row">
-            <span class="info-label">Departamento:</span>
-            <span>{{ $nomina->academico->departamento?->nombre ?? '—' }}</span>
-        </div>
-        <div class="info-row">
-            <span class="info-label">Facultad:</span>
-            <span>{{ $nomina->academico->facultad?->nombre ?? '—' }}</span>
-        </div>
+{{-- ── I. DATOS DEL ACADÉMICO ─────────────────────────── --}}
+@php
+    $catLabel = match($categoria) {
+        'titular'  => 'Titular',
+        'adjunto'  => 'Adjunto',
+        'auxiliar' => 'Auxiliar',
+        default    => ucfirst($categoria),
+    };
+    $lineaLabel = match($academico->linea_desarrollo) {
+        'docente'      => 'Docente',
+        'investigador' => 'Investigador',
+        'mixta'        => 'Mixta',
+        default        => '—',
+    };
+    $conceptoAnteriorLabel = match($academico->concepto_anterior ?? '') {
+        'excelente'  => 'Excelente',
+        'muy_bueno'  => 'Muy Bueno',
+        'bueno'      => 'Bueno',
+        'regular'    => 'Regular',
+        'deficiente' => 'Deficiente',
+        default      => ($academico->concepto_anterior ?? '—'),
+    };
+    $situacion = 'Calificar ' . $catLabel;
+@endphp
+
+<div class="profile-grid">
+    <div class="profile-cell span2">
+        <div class="cell-label">Nombre Completo</div>
+        <div class="cell-value">{{ $academico->name }}</div>
+    </div>
+    <div class="profile-cell">
+        <div class="cell-label">RUT</div>
+        <div class="cell-value">{{ $academico->rut }}</div>
+    </div>
+    <div class="profile-cell">
+        <div class="cell-label">Correo Electrónico</div>
+        <div class="cell-value" style="font-size:10px">{{ $academico->email }}</div>
+    </div>
+
+    <div class="profile-cell">
+        <div class="cell-label">Facultad</div>
+        <div class="cell-value">{{ $academico->facultad?->nombre ?? '—' }}</div>
+    </div>
+    <div class="profile-cell">
+        <div class="cell-label">Departamento</div>
+        <div class="cell-value">{{ $academico->departamento?->nombre ?? '—' }}</div>
+    </div>
+    <div class="profile-cell">
+        <div class="cell-label">Categoría Académica</div>
+        <div class="cell-value">{{ $catLabel }}</div>
+    </div>
+    <div class="profile-cell">
+        <div class="cell-label">Fecha de Jerarquización</div>
+        <div class="cell-value">{{ $academico->fecha_jerarquizacion?->format('d-m-Y') ?? '—' }}</div>
+    </div>
+
+    <div class="profile-cell">
+        <div class="cell-label">Línea de Desarrollo</div>
+        <div class="cell-value">{{ $lineaLabel }}</div>
+    </div>
+    <div class="profile-cell">
+        <div class="cell-label">Horas Contrato I Sem</div>
+        <div class="cell-value">{{ $academico->horas_contrato_isem ?? '—' }}</div>
+    </div>
+    <div class="profile-cell">
+        <div class="cell-label">Horas Contrato II Sem</div>
+        <div class="cell-value">{{ $academico->horas_contrato_iisem ?? '—' }}</div>
+    </div>
+    <div class="profile-cell">
+        <div class="cell-label">Situación Evaluativa</div>
+        <div class="cell-value">{{ $situacion }}</div>
+    </div>
+
+    <div class="profile-cell">
+        <div class="cell-label">Nota Calificación Anterior</div>
+        <div class="cell-value">{{ $academico->nota_anterior ? number_format($academico->nota_anterior, 1) : '—' }}</div>
+    </div>
+    <div class="profile-cell">
+        <div class="cell-label">Concepto Calificación Anterior</div>
+        <div class="cell-value">{{ $conceptoAnteriorLabel }}</div>
+    </div>
+    <div class="profile-cell span2">
+        <div class="cell-label">Período Evaluativo</div>
+        <div class="cell-value">{{ $periodo->anio }}</div>
     </div>
 </div>
 
-{{-- Calificación final --}}
-<div class="section">
-    <p class="section-title">Calificación Final</p>
-    <div class="calificacion-box">
-        <div class="calificacion-label">{{ $calificacion->calificacionLabel() }}</div>
-        <div class="calificacion-pts">{{ $calificacion->puntaje_total }} / 100 puntos</div>
-    </div>
-    <div style="margin-top: 6px; font-size: 11px; color: #555;">
-        <strong>Fecha de calificación:</strong> {{ $calificacion->fecha->format('d/m/Y') }}
-        &nbsp;·&nbsp;
-        <strong>Determinada por:</strong> {{ $calificacion->determinadaPor->name }}
-    </div>
-</div>
-
-{{-- Evaluaciones individuales --}}
-@if ($evaluaciones->count() > 0)
-<div class="section">
-    <p class="section-title">Evaluaciones Individuales de la CCA</p>
-    <table class="table-eval">
-        <thead>
-            <tr>
-                <th>Evaluador</th>
-                <th>Docencia</th>
-                <th>Investigación</th>
-                <th>Vinculación</th>
-                <th>Gestión</th>
-                <th>Formación</th>
-                <th>Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach ($evaluaciones as $ev)
-            <tr>
-                <td>{{ $ev->evaluador->name }}</td>
-                <td>{{ $ev->puntaje_docencia }}</td>
-                <td>{{ $ev->puntaje_investigacion }}</td>
-                <td>{{ $ev->puntaje_vinculacion }}</td>
-                <td>{{ $ev->puntaje_gestion }}</td>
-                <td>{{ $ev->puntaje_formacion }}</td>
-                <td><strong>{{ $ev->puntajeTotal() }}</strong></td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
+{{-- ── REGLAMENTO ACADÉMICO ────────────────────────────── --}}
+@php $articuloTexto = config("reglamento_apa.articulo.{$categoria}", ''); @endphp
+@if ($articuloTexto)
+<div class="reglamento-box">
+    <div class="reg-title">Reglamento Académico</div>
+    <div class="reg-body">{{ $articuloTexto }}</div>
 </div>
 @endif
 
-{{-- Observación de la CCA --}}
+{{-- ── II. RESUMEN DE HORAS Y RESULTADO ───────────────── --}}
+<div class="section-title">
+    II. Resumen de horas por áreas de desarrollo y resultado de la evaluación académica
+</div>
+
+<table class="table-areas">
+    <thead>
+        <tr>
+            <th class="col-num" rowspan="2"></th>
+            <th class="col-area left" rowspan="2">Área de Desarrollo Académico</th>
+            <th colspan="2">Horas</th>
+            <th class="col-pct" rowspan="2">% Tiempo<br>Asignado</th>
+            <th class="col-nota" rowspan="2">Nota</th>
+            <th class="col-conc" rowspan="2">Concepto</th>
+            <th class="col-pond" rowspan="2">Ponderación<br>(%T × N/100)</th>
+        </tr>
+        <tr>
+            <th class="col-hrs">I Sem</th>
+            <th class="col-hrs">II Sem</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach ($areas as $i => $area)
+        <tr>
+            <td>{{ $i + 1 }}.</td>
+            <td class="left">{{ $area['nombre'] }}</td>
+            <td>{{ $area['horas_isem'] }}</td>
+            <td>{{ $area['horas_iisem'] }}</td>
+            <td>{{ $area['peso'] > 0 ? $area['peso'].'%' : '0%' }}</td>
+            <td>{{ $area['nota'] }}</td>
+            <td>{{ $area['concepto'] }}</td>
+            <td>{{ $area['ponderacion'] }}</td>
+        </tr>
+        @endforeach
+
+        {{-- Fila calificación final --}}
+        <tr class="row-final">
+            <td colspan="2" class="left">Calificación Final</td>
+            <td>{{ $academico->horas_contrato_isem ?? '—' }}</td>
+            <td>{{ $academico->horas_contrato_iisem ?? '—' }}</td>
+            <td>100%</td>
+            <td>{{ number_format((float) $calificacion->nota_final, 2) }}</td>
+            <td>{{ $calificacion->calificacionLabel() }}</td>
+            <td>{{ number_format((float) $calificacion->nota_final, 2) }}</td>
+        </tr>
+    </tbody>
+</table>
+
+<p class="table-note">
+    Importante: Las horas de libre disposición no deben ser consideradas ni incluidas en este cálculo.
+    Nota final = min(Σ(%T<sub>i</sub> × N<sub>i</sub>) / 100, 5.0).
+    Determinada el {{ $calificacion->fecha->format('d/m/Y') }} por {{ $calificacion->determinadaPor->name }}.
+</p>
+
+{{-- ── III. INTERPRETACIÓN Y RETROALIMENTACIÓN ────────── --}}
+@php
+    $conceptoKey = $calificacion->calificacion;
+    $definicion  = config("reglamento_apa.concepto_definicion.{$conceptoKey}", '');
+@endphp
+
+<div class="section-title">
+    III. Interpretación del resultado y retroalimentación de la evaluación
+</div>
+
+@if ($definicion)
+<div class="interp-box">
+    <strong>{{ $calificacion->calificacionLabel() }}:</strong> "{{ $definicion }}"
+</div>
+@endif
+
 @if ($calificacion->observacion)
-<div class="section">
-    <p class="section-title">Observación de la CCA</p>
-    <div class="observacion-box">{{ $calificacion->observacion }}</div>
+<div class="retro-box">
+    <strong>Observación de la CCA:</strong><br>
+    {{ $calificacion->observacion }}
 </div>
 @endif
 
-{{-- Firma --}}
+@if ($evaluaciones->whereNotNull('comentario')->where('comentario', '!=', '')->count() > 0)
+<table class="eval-table">
+    <thead>
+        <tr>
+            <th>Miembro CCA</th>
+            <th>Nota calculada</th>
+            <th>Retroalimentación</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach ($evaluaciones->whereNotNull('comentario')->where('comentario', '!=', '') as $ev)
+        @php
+            $notaEv = \App\Services\CalificacionCadService::calcularDesdeEvaluacion($ev, $categoria ?? 'adjunto');
+        @endphp
+        <tr>
+            <td>{{ $ev->evaluador->name }}</td>
+            <td style="text-align:center">{{ number_format($notaEv, 2) }}</td>
+            <td>{{ $ev->comentario }}</td>
+        </tr>
+        @endforeach
+    </tbody>
+</table>
+@endif
+
+{{-- ── FIRMAS ──────────────────────────────────────────── --}}
 <div class="firma-section">
     <div class="firma-box">
         <div class="firma-line"></div>
@@ -290,7 +450,7 @@
     </div>
     <div class="firma-box">
         <div class="firma-line"></div>
-        <p class="firma-label">Académico Evaluado — Recepción conforme</p>
+        <p class="firma-label">Académico/a Evaluado/a — Recepción conforme</p>
     </div>
     <div class="firma-box">
         <div class="firma-line"></div>

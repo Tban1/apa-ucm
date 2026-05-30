@@ -296,15 +296,46 @@ class EvaluacionController extends Controller
         }
 
         $esApelacion = $calificacion->es_apelacion;
+        $nomina->load(['academico.facultad', 'academico.departamento']);
+        $academico = $nomina->academico;
+        $categoria = $academico->categoria_academica ?? 'adjunto';
+        $pesos     = CalificacionCadService::pesosParaCategoria($categoria);
+        $categorias = CategoriaApa::orderBy('orden')->get();
 
         $evaluaciones = Evaluacion::with('evaluador')
             ->where('nomina_id', $nomina->id)
             ->where('es_apelacion', $esApelacion)
             ->get();
 
+        $areas = $categorias->map(function ($cat) use ($pesos, $evaluaciones, $academico) {
+            $slugReg     = CalificacionCadService::SLUG_A_REGLAMENTO[$cat->slug] ?? $cat->slug;
+            $campo       = CalificacionCadService::CAMPOS[$slugReg] ?? null;
+            $peso        = (float) ($pesos[$slugReg] ?? 0);
+            $nota        = ($campo && $evaluaciones->count() > 0)
+                ? round((float) $evaluaciones->avg($campo), 2)
+                : 0.0;
+            $concepto    = $nota > 0 ? CalificacionCadService::conceptoDesdeNota($nota) : null;
+            $ponderacion = round(($peso * $nota) / 100, 2);
+            $horasIsem   = $peso > 0 ? round(($peso * ($academico->horas_contrato_isem ?? 0)) / 100, 1) : 0;
+            $horasIisem  = $peso > 0 ? round(($peso * ($academico->horas_contrato_iisem ?? 0)) / 100, 1) : 0;
+
+            return [
+                'nombre'      => $cat->nombre,
+                'peso'        => $peso,
+                'nota'        => $nota > 0 ? number_format($nota, 2) : '—',
+                'concepto'    => $concepto ? CalificacionCadService::labelConcepto($concepto) : '—',
+                'ponderacion' => $nota > 0 ? number_format($ponderacion, 2) : '—',
+                'horas_isem'  => $horasIsem > 0 ? number_format($horasIsem, 2) : '—',
+                'horas_iisem' => $horasIisem > 0 ? number_format($horasIisem, 2) : '—',
+            ];
+        });
+
         $periodo = $nomina->periodo;
 
-        return view('cca.calificacion', compact('nomina', 'calificacion', 'evaluaciones', 'periodo'));
+        return view('cca.calificacion', compact(
+            'nomina', 'calificacion', 'evaluaciones', 'periodo',
+            'academico', 'categoria', 'areas'
+        ));
     }
 
     public function finalize(Request $request, Nomina $nomina)
