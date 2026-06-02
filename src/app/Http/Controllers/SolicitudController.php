@@ -65,27 +65,32 @@ class SolicitudController extends Controller
 
         $documentoPath = $this->guardarDocumento($request, $nomina);
 
-        Solicitud::create([
+        $solicitud = Solicitud::create([
             'nomina_id'         => $nomina->id,
             'tipo'              => $data['tipo'],
             'fecha_inicio'      => $data['fecha_inicio'],
             'fecha_fin'         => $data['fecha_fin'] ?? null,
             'motivo'            => $data['motivo'],
             'documento_adjunto' => $documentoPath,
-            'estado'            => 'pendiente_aprobacion',
+            'estado'            => 'activa',
             'creado_por'        => $user->id,
             'iniciada_por'      => $user->id,
+            'aprobada_por'      => $user->id,
+            'fecha_aprobacion'  => now(),
         ]);
 
+        // Bloquear acceso al académico mientras la solicitud esté activa
+        $nomina->academico->update(['bloqueado_por_licencia' => true]);
+
         $this->notificarAnalistas(
-            'solicitud_pendiente',
-            'Nueva solicitud pendiente de aprobación',
+            'solicitud_registrada',
+            'Nueva solicitud registrada por secretario',
             "El secretario {$user->name} registró una solicitud de {$this->labelTipo($data['tipo'])} "
-            . "para {$nomina->academico->name}. Requiere revisión CCDA.",
+            . "para {$nomina->academico->name}.",
             route('analista.solicitudes')
         );
 
-        return back()->with('success', 'Solicitud enviada al CCDA para aprobación.');
+        return back()->with('success', 'Solicitud registrada y activada.');
     }
 
     // ── Analista CCDA ─────────────────────────────────────────────────────
@@ -233,6 +238,9 @@ class SolicitudController extends Controller
             'observacion_licencia' => null,
             'plazo_licencia'       => $fechaPlazo,
         ]);
+
+        // Desbloquear acceso del académico
+        $academico->update(['bloqueado_por_licencia' => false]);
 
         $mensajeSecretario = "{$academico->name} fue reincorporado al proceso CAD con plazo de evidencias "
             . "hasta el {$fechaFormateada}.";

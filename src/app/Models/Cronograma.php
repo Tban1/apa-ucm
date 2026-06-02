@@ -14,18 +14,20 @@ class Cronograma extends Model
         'carga_evidencias',
         'evaluacion_secretario',
         'evaluacion_cca',
+        'consejo_facultad',
         'apelaciones',
-        'evaluacion_jefatura',
+        'revision_vicerrectoria',
         'cierre',
     ];
 
     public const ETIQUETAS = [
-        'carga_evidencias'      => 'Carga de Evidencias',
-        'evaluacion_secretario' => 'Validación Secretario',
-        'evaluacion_cca'        => 'Evaluación CCA',
-        'apelaciones'           => 'Apelaciones',
-        'evaluacion_jefatura'   => 'Evaluación Jefatura',
-        'cierre'                => 'Cierre',
+        'carga_evidencias'       => 'Carga de Evidencias',
+        'evaluacion_secretario'  => 'Validación Secretario',
+        'evaluacion_cca'         => 'Evaluación CCA',
+        'consejo_facultad'       => 'Consejo de Facultad',
+        'apelaciones'            => 'Apelaciones',
+        'revision_vicerrectoria' => 'Revisión Vicerrectoría',
+        'cierre'                 => 'Cierre',
     ];
 
     protected $fillable = [
@@ -66,11 +68,13 @@ class Cronograma extends Model
     public static function calcularFechaInicio(string $etapa, string $periodoInicio, array $finesPorEtapa): string
     {
         return match ($etapa) {
-            'carga_evidencias', 'evaluacion_secretario', 'evaluacion_jefatura' => $periodoInicio,
-            'evaluacion_cca'  => $finesPorEtapa['carga_evidencias'],
-            'apelaciones'     => $finesPorEtapa['evaluacion_cca'],
-            'cierre'          => $finesPorEtapa['apelaciones'],
-            default           => throw new \InvalidArgumentException("Etapa desconocida: {$etapa}"),
+            'carga_evidencias', 'evaluacion_secretario' => $periodoInicio,
+            'evaluacion_cca'         => $finesPorEtapa['carga_evidencias'],
+            'consejo_facultad'       => $finesPorEtapa['evaluacion_cca'],
+            'apelaciones'            => $finesPorEtapa['consejo_facultad'],
+            'revision_vicerrectoria' => $finesPorEtapa['apelaciones'],
+            'cierre'                 => $finesPorEtapa['revision_vicerrectoria'],
+            default                  => throw new \InvalidArgumentException("Etapa desconocida: {$etapa}"),
         };
     }
 

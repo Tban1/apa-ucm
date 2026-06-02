@@ -2,24 +2,26 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 
 const ETAPAS = [
-    { value: 'carga_evidencias',      label: 'Carga de Evidencias' },
-    { value: 'evaluacion_secretario', label: 'Validación Secretario' },
-    { value: 'evaluacion_cca',        label: 'Evaluación CCA' },
-    { value: 'apelaciones',           label: 'Apelaciones' },
-    { value: 'evaluacion_jefatura',   label: 'Evaluación Jefatura' },
-    { value: 'cierre',                label: 'Cierre' },
+    { value: 'carga_evidencias',       label: 'Carga de Evidencias' },
+    { value: 'evaluacion_secretario',  label: 'Validación Secretario' },
+    { value: 'evaluacion_cca',         label: 'Evaluación CCA' },
+    { value: 'consejo_facultad',       label: 'Consejo de Facultad' },
+    { value: 'apelaciones',            label: 'Apelaciones' },
+    { value: 'revision_vicerrectoria', label: 'Revisión Vicerrectoría' },
+    { value: 'cierre',                 label: 'Cierre' },
 ];
 
 const ETAPAS_PARALELAS = new Set([
     'carga_evidencias',
     'evaluacion_secretario',
-    'evaluacion_jefatura',
 ]);
 
 const INICIO_SECUENCIAL = {
-    evaluacion_cca:  'carga_evidencias',
-    apelaciones:     'evaluacion_cca',
-    cierre:          'apelaciones',
+    evaluacion_cca:         'carga_evidencias',
+    consejo_facultad:       'evaluacion_cca',
+    apelaciones:            'consejo_facultad',
+    revision_vicerrectoria: 'apelaciones',
+    cierre:                 'revision_vicerrectoria',
 };
 
 export default function PeriodoCreate() {
@@ -27,7 +29,7 @@ export default function PeriodoCreate() {
         nombre:       '',
         fecha_inicio: '',
         fecha_cierre: '',
-        cronograma:   ETAPAS.map(e => ({ etapa: e.value, fecha_fin: '' })),
+        cronograma: ETAPAS.map(e => ({ etapa: e.value, fecha_fin: '' })),
     });
 
     function finEtapa(etapa) {

@@ -16,7 +16,7 @@ class StorePeriodoRequest extends FormRequest
             'nombre'                 => ['required', 'string', 'max:120'],
             'fecha_inicio'           => ['required', 'date'],
             'fecha_cierre'           => ['required', 'date', 'after:fecha_inicio'],
-            'cronograma'             => ['required', 'array', 'size:6'],
+            'cronograma'             => ['required', 'array', 'size:7'],
             'cronograma.*.etapa'     => ['required', 'string', 'in:'.implode(',', Cronograma::ETAPAS)],
             'cronograma.*.fecha_fin' => ['required', 'date'],
         ];
@@ -29,7 +29,7 @@ class StorePeriodoRequest extends FormRequest
             $cierre     = $this->input('fecha_cierre');
             $cronograma = $this->input('cronograma', []);
 
-            if (!$inicio || !$cierre || count($cronograma) !== 6) {
+            if (!$inicio || !$cierre || count($cronograma) !== 7) {
                 return;
             }
 
@@ -82,7 +82,7 @@ class StorePeriodoRequest extends FormRequest
     {
         return [
             'fecha_cierre.after'              => 'La fecha de cierre debe ser posterior al inicio.',
-            'cronograma.size'                 => 'El cronograma debe tener exactamente 6 etapas.',
+            'cronograma.size'                 => 'El cronograma debe tener exactamente 7 etapas.',
             'cronograma.*.etapa.in'           => 'La etapa indicada no es válida.',
             'cronograma.*.fecha_fin.required' => 'La fecha de cierre de la etapa es obligatoria.',
         ];

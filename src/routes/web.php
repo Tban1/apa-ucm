@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AnalistaCCDAController;
+use App\Http\Controllers\VicerrectoraController;
 use App\Http\Controllers\ApelacionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EvaluacionController;
@@ -40,9 +41,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/periodos/crear', [PeriodoController::class, 'create'])->name('analista.periodos.create');
         Route::post('/periodos',      [PeriodoController::class, 'store'])->name('analista.periodos.store');
 
-        Route::get('/periodos/{periodo}/nominas/crear',  [NominaController::class,  'create'])->name('analista.periodos.nominas.create');
-        Route::post('/periodos/{periodo}/nominas',       [NominaController::class,  'store'])->name('analista.periodos.nominas.store');
-        Route::get('/periodos/{periodo}/cronograma/pdf', [PeriodoController::class, 'imprimirCronograma'])->name('analista.periodos.cronograma.pdf');
+        Route::get('/periodos/{periodo}/nominas/crear',           [NominaController::class,  'create'])->name('analista.periodos.nominas.create');
+        Route::post('/periodos/{periodo}/nominas',                [NominaController::class,  'store'])->name('analista.periodos.nominas.store');
+        Route::post('/periodos/{periodo}/nominas/preview-excel',  [NominaController::class,  'previewExcel'])->name('analista.periodos.nominas.preview-excel');
+        Route::post('/periodos/{periodo}/nominas/importar-excel', [NominaController::class,  'importarExcel'])->name('analista.periodos.nominas.importar-excel');
+        Route::post('/periodos/{periodo}/nominas/agregar',        [NominaController::class,  'agregarIndividual'])->name('analista.periodos.nominas.agregar');
+        Route::get('/periodos/{periodo}/nominas/exportar',        [NominaController::class,  'exportar'])->name('analista.periodos.nominas.exportar');
+        Route::get('/periodos/{periodo}/cronograma/pdf',          [PeriodoController::class, 'imprimirCronograma'])->name('analista.periodos.cronograma.pdf');
 
         Route::patch('/nominas/{nomina}/licencia', [NominaController::class, 'toggleLicencia'])->name('analista.nominas.licencia');
 
@@ -107,4 +112,10 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:academico')->get('/academico/bloqueado', fn () => inertia('Academico/BloqueadoLicencia'))
         ->name('academico.bloqueado');
+
+    Route::middleware('role:vicerrectora')->prefix('vicerrectora')->group(function () {
+        Route::get('/dashboard',              [VicerrectoraController::class, 'dashboard'])->name('vicerrectora.dashboard');
+        Route::get('/expedientes/{nomina}',   [VicerrectoraController::class, 'expediente'])->name('vicerrectora.expedientes.show');
+        Route::post('/expedientes/{nomina}/comentar', [VicerrectoraController::class, 'comentar'])->name('vicerrectora.comentar');
+    });
 });

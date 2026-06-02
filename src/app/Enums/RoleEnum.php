@@ -4,12 +4,13 @@ namespace App\Enums;
 
 enum RoleEnum: string
 {
-    case Admin         = 'admin';
-    case AnalistaCCDA  = 'analista_ccda';
-    case Secretario    = 'secretario';
-    case MiembroCCA    = 'miembro_cca';
-    case JefeAcademico = 'jefe_academico';
-    case Academico     = 'academico';
+    case Admin          = 'admin';
+    case AnalistaCCDA   = 'analista_ccda';
+    case Secretario     = 'secretario';
+    case MiembroCCA     = 'miembro_cca';
+    case JefeAcademico  = 'jefe_academico';
+    case Academico      = 'academico';
+    case Vicerrectora   = 'vicerrectora';
 
     public function label(): string
     {
@@ -20,13 +21,14 @@ enum RoleEnum: string
             self::MiembroCCA    => 'Miembro CCA',
             self::JefeAcademico => 'Jefe Académico',
             self::Academico     => 'Académico',
+            self::Vicerrectora  => 'Vicerrectora',
         };
     }
 
     /** Roles con acceso institucional (sin restricción de facultad). */
     public static function nivelInstitucional(): array
     {
-        return [self::Admin, self::AnalistaCCDA];
+        return [self::Admin, self::AnalistaCCDA, self::Vicerrectora];
     }
 
     /** Roles acotados a una facultad. */

@@ -79,12 +79,13 @@ class DemoSeeder extends Seeder
 
         // Etapas secuenciales (cada una empieza el día siguiente a la anterior).
         $etapas = [
-            ['etapa' => 'carga_evidencias',      'desde' => 0,   'hasta' => 30],
-            ['etapa' => 'evaluacion_secretario', 'desde' => 31,  'hasta' => 60],
-            ['etapa' => 'evaluacion_cca',        'desde' => 61,  'hasta' => 90],
-            ['etapa' => 'apelaciones',           'desde' => 91,  'hasta' => 110],
-            ['etapa' => 'evaluacion_jefatura',   'desde' => 111, 'hasta' => 135],
-            ['etapa' => 'cierre',                'desde' => 136, 'hasta' => 150],
+            ['etapa' => 'carga_evidencias',       'desde' => 0,   'hasta' => 30],
+            ['etapa' => 'evaluacion_secretario',  'desde' => 0,   'hasta' => 45],
+            ['etapa' => 'evaluacion_cca',         'desde' => 31,  'hasta' => 75],
+            ['etapa' => 'consejo_facultad',       'desde' => 76,  'hasta' => 95],
+            ['etapa' => 'apelaciones',            'desde' => 96,  'hasta' => 115],
+            ['etapa' => 'revision_vicerrectoria', 'desde' => 116, 'hasta' => 135],
+            ['etapa' => 'cierre',                 'desde' => 136, 'hasta' => 150],
         ];
 
         foreach ($etapas as $e) {
