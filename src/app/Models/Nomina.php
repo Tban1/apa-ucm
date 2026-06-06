@@ -13,7 +13,8 @@ class Nomina extends Model
     use HasUuids;
 
     protected $fillable = [
-        'periodo_id', 'user_id', 'estado',
+        'periodo_id', 'user_id', 'facultad_id', 'estado',
+        'categoria', 'horas_contrato', 'datos_adicionales',
         'con_licencia', 'observacion_licencia', 'plazo_licencia', 'documento_licencia',
         'observacion_secretario',
     ];
@@ -21,15 +22,63 @@ class Nomina extends Model
     protected function casts(): array
     {
         return [
-            'con_licencia'   => 'boolean',
-            'plazo_licencia' => 'date',
+            'con_licencia'      => 'boolean',
+            'plazo_licencia'    => 'date',
+            'datos_adicionales' => 'array',
         ];
+    }
+
+    public function facultad(): BelongsTo
+    {
+        return $this->belongsTo(Facultad::class);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
     public function puedeCargarEvidencias(): bool
     {
         return in_array($this->estado, ['pendiente', 'en_carga']);
+    }
+
+    /** ¿Puede declarar APA y/o subir evidencias ahora? */
+    public function cargaEvidenciasHabilitada(): bool
+    {
+        if (!$this->puedeCargarEvidencias()) {
+            return false;
+        }
+
+        $facultadId = $this->facultad_id ?? $this->academico?->facultad_id;
+        if (!$facultadId) {
+            return false;
+        }
+
+        $plazo = PlazoFacultad::where('periodo_id', $this->periodo_id)
+            ->where('facultad_id', $facultadId)
+            ->first();
+
+        if ($plazo?->estaCerradoFormalmente()) {
+            return false;
+        }
+
+        $plazoIndividualVigente = $this->plazo_licencia
+            && $this->plazo_licencia->toDateString() >= now()->toDateString();
+
+        if ($this->con_licencia && !$plazoIndividualVigente) {
+            return false;
+        }
+
+        if ($plazoIndividualVigente) {
+            return true;
+        }
+
+        $etapaCarga = Cronograma::where('periodo_id', $this->periodo_id)
+            ->where('etapa', 'carga_evidencias')
+            ->first();
+
+        if ($etapaCarga?->haTerminado()) {
+            return false;
+        }
+
+        return $plazo === null || $plazo->estaVigente();
     }
 
     public function estaEnEvaluacion(): bool
@@ -106,6 +155,16 @@ class Nomina extends Model
         return $this->hasMany(Solicitud::class);
     }
 
+    public function compromisoApa(): HasOne
+    {
+        return $this->hasOne(CompromisoApa::class);
+    }
+
+    public function tieneCompromisoApaConfirmado(): bool
+    {
+        return $this->compromisoApa && $this->compromisoApa->estaConfirmado();
+    }
+
     public function solicitudActiva(string $tipo = 'licencia_medica'): ?Solicitud
     {
         return $this->solicitudes()
@@ -126,17 +185,17 @@ class Nomina extends Model
         if ($licencia) {
             $hasta = $licencia->fecha_fin?->format('d/m/Y') ?? 'indefinido';
 
-            return "Pendiente - Licencia hasta {$hasta}";
+            return "Pendiente hasta {$hasta}";
         }
 
-        $pendiente = $this->solicitudes()
-            ->where('tipo', 'licencia_medica')
-            ->where('estado', 'pendiente_aprobacion')
-            ->latest()
-            ->first();
+        $sinCalif = $this->evaluaciones
+            ->where('es_apelacion', false)
+            ->first(fn ($e) => $e->sin_calificacion);
 
-        if ($pendiente) {
-            return 'Pendiente - Licencia (aprobación CCDA)';
+        if ($sinCalif) {
+            $motivo = $sinCalif->motivo_sc ? " — {$sinCalif->motivo_sc}" : '';
+
+            return "S/C{$motivo}";
         }
 
         if (in_array($this->estado, ['evaluado', 'cerrado'])) {
@@ -144,14 +203,6 @@ class Nomina extends Model
         }
 
         return 'Sin evaluar';
-    }
-
-    public function tieneSolicitudLicenciaPendiente(): bool
-    {
-        return $this->solicitudes()
-            ->where('tipo', 'licencia_medica')
-            ->where('estado', 'pendiente_aprobacion')
-            ->exists();
     }
 
     // ── Scopes ───────────────────────────────────────────────────────────

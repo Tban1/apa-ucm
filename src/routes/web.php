@@ -1,8 +1,9 @@
 <?php
 
-use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AnalistaCCDAController;
 use App\Http\Controllers\ApelacionController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CompromisoApaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EvaluacionController;
 use App\Http\Controllers\EvidenciaController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\PeriodoController;
 use App\Http\Controllers\SecretarioController;
 use App\Http\Controllers\SolicitudController;
+use App\Http\Controllers\VicerrectoraController;
 use App\Models\Acta;
 use Illuminate\Support\Facades\Route;
 
@@ -40,8 +42,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/periodos/crear', [PeriodoController::class, 'create'])->name('analista.periodos.create');
         Route::post('/periodos',      [PeriodoController::class, 'store'])->name('analista.periodos.store');
 
-        Route::get('/periodos/{periodo}/nominas/crear',  [NominaController::class,  'create'])->name('analista.periodos.nominas.create');
-        Route::post('/periodos/{periodo}/nominas',       [NominaController::class,  'store'])->name('analista.periodos.nominas.store');
+        Route::get('/periodos/{periodo}/nominas/crear',     [NominaController::class, 'create'])->name('analista.periodos.nominas.create');
+        Route::post('/periodos/{periodo}/nominas',         [NominaController::class, 'store'])->name('analista.periodos.nominas.store');
+        Route::post('/periodos/{periodo}/nominas/importar',[NominaController::class, 'importPreview'])->name('analista.periodos.nominas.importar');
+        Route::get('/periodos/{periodo}/nominas/exportar',[NominaController::class, 'exportExcel'])->name('analista.periodos.nominas.exportar');
+        Route::get('/nominas/plantilla',                   [NominaController::class, 'downloadPlantilla'])->name('analista.nominas.plantilla');
         Route::get('/periodos/{periodo}/cronograma/pdf', [PeriodoController::class, 'imprimirCronograma'])->name('analista.periodos.cronograma.pdf');
 
         Route::patch('/nominas/{nomina}/licencia', [NominaController::class, 'toggleLicencia'])->name('analista.nominas.licencia');
@@ -50,11 +55,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/reporte-calificaciones',   [AnalistaCCDAController::class, 'reporteCalificaciones'])->name('analista.reporte-calificaciones');
         Route::get('/incumplimientos',          [AnalistaCCDAController::class, 'incumplimientos'])->name('analista.incumplimientos');
 
-        Route::get('/solicitudes',                          [SolicitudController::class, 'indexAnalista'])->name('analista.solicitudes');
-        Route::patch('/solicitudes/{solicitud}/aprobar',    [SolicitudController::class, 'aprobar'])->name('analista.solicitudes.aprobar');
-        Route::patch('/solicitudes/{solicitud}/rechazar',   [SolicitudController::class, 'rechazar'])->name('analista.solicitudes.rechazar');
-        Route::patch('/solicitudes/{solicitud}/reincorporar', [SolicitudController::class, 'reincorporar'])->name('analista.solicitudes.reincorporar');
-        Route::get('/solicitudes/{solicitud}/documento',   [SolicitudController::class, 'downloadDocumento'])->name('analista.solicitudes.documento');
+        Route::get('/solicitudes',                        [SolicitudController::class, 'indexAnalista'])->name('analista.solicitudes');
+        Route::get('/solicitudes/{solicitud}/documento',  [SolicitudController::class, 'downloadDocumento'])->name('analista.solicitudes.documento');
     });
 
     Route::middleware('role:secretario')->prefix('secretario')->group(function () {
@@ -73,6 +75,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/acta-cierre/{acta}',                                       [SecretarioController::class, 'imprimirActaCierre'])->name('secretario.acta-cierre');
         Route::get('/solicitudes',                                              [SolicitudController::class, 'indexSecretario'])->name('secretario.solicitudes');
         Route::post('/solicitudes',                                             [SolicitudController::class, 'storeSecretario'])->name('secretario.solicitudes.store');
+        Route::patch('/solicitudes/{solicitud}/reincorporar',                   [SolicitudController::class, 'reincorporar'])->name('secretario.solicitudes.reincorporar');
         Route::get('/solicitudes/{solicitud}/documento',                        [SolicitudController::class, 'downloadDocumento'])->name('secretario.solicitudes.documento');
     });
 
@@ -86,6 +89,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/expedientes/{nomina}/calificacion-pdf',                         [EvaluacionController::class, 'imprimirCalificacion'])->name('cca.expedientes.calificacion-pdf');
     });
 
+    Route::middleware('role:vicerrectora')->prefix('vicerrectora')->group(function () {
+        Route::get('/dashboard',                              [DashboardController::class, 'vicerrectora'])->name('vicerrectora.dashboard');
+        Route::get('/academicos',                             [VicerrectoraController::class, 'index'])->name('vicerrectora.academicos');
+        Route::get('/academicos/{nomina}',                    [VicerrectoraController::class, 'show'])->name('vicerrectora.academicos.show');
+        Route::post('/evaluaciones/{evaluacion}/comentario',  [VicerrectoraController::class, 'storeComentario'])->name('vicerrectora.comentario.store');
+    });
+
     Route::middleware('role:jefe_academico')->prefix('jefe')->group(function () {
         Route::get('/dashboard',                    [DashboardController::class, 'jefe'])->name('jefe.dashboard');
         Route::get('/academicos',                   [JefaturaController::class,  'index'])->name('jefe.academicos');
@@ -95,6 +105,11 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware(['role:academico', 'academico.no_licencia'])->prefix('academico')->group(function () {
+        Route::get('/declaracion-apa',       [CompromisoApaController::class, 'showDeclaracion'])->name('academico.declaracion-apa');
+        Route::post('/declaracion-apa',      [CompromisoApaController::class, 'storeDeclaracion'])->name('academico.declaracion-apa.store');
+    });
+
+    Route::middleware(['role:academico', 'academico.no_licencia', 'compromiso.apa'])->prefix('academico')->group(function () {
         Route::get('/dashboard',  [DashboardController::class,  'academico'])->name('academico.dashboard');
         Route::get('/evidencias',                          [EvidenciaController::class,  'index'])->name('academico.evidencias');
         Route::post('/evidencias',                         [EvidenciaController::class,  'store'])->name('academico.evidencias.store');

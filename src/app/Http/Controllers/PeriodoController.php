@@ -35,6 +35,12 @@ class PeriodoController extends Controller
 
     public function store(StorePeriodoRequest $request)
     {
+        if (Periodo::where('estado', '!=', 'cerrado')->exists()) {
+            return back()->withErrors([
+                'periodo' => 'No se puede crear un nuevo período mientras exista uno sin cerrar.',
+            ]);
+        }
+
         $data = $request->validated();
 
         DB::transaction(function () use ($data, $request) {
