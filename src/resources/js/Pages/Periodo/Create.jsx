@@ -2,24 +2,26 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 
 const ETAPAS = [
-    { value: 'carga_evidencias',      label: 'Carga de Evidencias' },
-    { value: 'evaluacion_secretario', label: 'Validación Secretario' },
-    { value: 'evaluacion_cca',        label: 'Evaluación CCA' },
-    { value: 'apelaciones',           label: 'Apelaciones' },
-    { value: 'evaluacion_jefatura',   label: 'Evaluación Jefatura' },
-    { value: 'cierre',                label: 'Cierre' },
+    { value: 'carga_evidencias',       label: 'Carga de Evidencias' },
+    { value: 'validacion_secretario',  label: 'Validación Secretario' },
+    { value: 'evaluacion_cca',         label: 'Evaluación CCA' },
+    { value: 'consejo_facultad',       label: 'Consejo de Facultad' },
+    { value: 'apelaciones',            label: 'Apelaciones' },
+    { value: 'revision_vicerrectoria', label: 'Revisión Vicerrectoría' },
+    { value: 'cierre',                 label: 'Cierre' },
 ];
 
 const ETAPAS_PARALELAS = new Set([
     'carga_evidencias',
-    'evaluacion_secretario',
-    'evaluacion_jefatura',
+    'validacion_secretario',
 ]);
 
 const INICIO_SECUENCIAL = {
-    evaluacion_cca:  'carga_evidencias',
-    apelaciones:     'evaluacion_cca',
-    cierre:          'apelaciones',
+    evaluacion_cca:         'carga_evidencias',
+    consejo_facultad:       'evaluacion_cca',
+    apelaciones:            'consejo_facultad',
+    revision_vicerrectoria: 'apelaciones',
+    cierre:                 'revision_vicerrectoria',
 };
 
 export default function PeriodoCreate() {
@@ -64,7 +66,6 @@ export default function PeriodoCreate() {
 
                 <form onSubmit={submit} className="w-full space-y-8">
 
-                    {/* Información básica */}
                     <section className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
                         <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
                             Información del período
@@ -110,18 +111,20 @@ export default function PeriodoCreate() {
                                 {errors.fecha_cierre && <p className="mt-1 text-xs text-red-600">{errors.fecha_cierre}</p>}
                             </div>
                         </div>
+
+                        {errors.periodo && (
+                            <p className="text-xs text-red-600">{errors.periodo}</p>
+                        )}
                     </section>
 
-                    {/* Cronograma */}
                     <section className="bg-white rounded-xl border border-gray-200 p-6">
                         <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-1">
                             Cronograma de etapas
                         </h2>
                         <p className="text-xs text-gray-400 mb-5">
-                            La carga de evidencias, la validación del secretario y la evaluación de jefatura
-                            inician al comienzo del período. La evaluación CCA, apelaciones y cierre son
-                            secuenciales y se habilitan automáticamente al cerrar la etapa anterior. Defina
-                            la fecha de cierre de cada etapa.
+                            La carga de evidencias y la validación del secretario inician al comienzo del período.
+                            Las demás etapas se habilitan secuencialmente al cerrar la etapa anterior.
+                            Defina la fecha de cierre de cada etapa.
                         </p>
 
                         {errors.cronograma && (
@@ -151,7 +154,6 @@ export default function PeriodoCreate() {
                         </div>
                     </section>
 
-                    {/* Acciones */}
                     <div className="flex items-center gap-4">
                         <button
                             type="submit"
