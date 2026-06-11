@@ -40,6 +40,18 @@ export default function AnalistaCCDA({ stats }) {
                         linkLabel="Reporte calificaciones"
                         external
                     />
+                    <ActionCard
+                        title="Apelaciones CCDA"
+                        description="Expedientes con calificación Regular/Deficiente derivados al 2do nivel de revisión."
+                        href="/analista/apelaciones"
+                        linkLabel="Ver apelaciones"
+                    />
+                    <ActionCard
+                        title="Registro CCDA"
+                        description="Verificación por facultad del proceso completo antes de enviar a Vicerrectoría."
+                        href="/analista/registro-ccda"
+                        linkLabel="Ver registro"
+                    />
                 </div>
 
             </AppLayout>

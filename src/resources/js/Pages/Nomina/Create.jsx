@@ -17,7 +17,7 @@ function ModalAgregarAcademico({ periodo, facultades, onClose }) {
 
     function submit(e) {
         e.preventDefault();
-        post(route('analista.periodos.nominas.agregar', periodo.id), { onSuccess: onClose });
+        post(`/analista/periodos/${periodo.id}/nominas/agregar`, { onSuccess: onClose });
     }
 
     return (
@@ -53,7 +53,6 @@ function ModalAgregarAcademico({ periodo, facultades, onClose }) {
                             </div>
                         ))}
                     </div>
-
                     <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">Facultad (opcional)</label>
                         <select value={data.facultad_id} onChange={e => setData('facultad_id', e.target.value)}
@@ -62,7 +61,6 @@ function ModalAgregarAcademico({ periodo, facultades, onClose }) {
                             {facultades.map(f => <option key={f.id} value={f.id}>{f.nombre}</option>)}
                         </select>
                     </div>
-
                     <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">Categoría académica</label>
                         <select value={data.categoria} onChange={e => setData('categoria', e.target.value)}
@@ -74,7 +72,6 @@ function ModalAgregarAcademico({ periodo, facultades, onClose }) {
                         </select>
                         {errors.categoria && <p className="mt-1 text-xs text-red-600">{errors.categoria}</p>}
                     </div>
-
                     <div className="flex gap-3 justify-end pt-2">
                         <button type="button" onClick={onClose} className="text-sm text-gray-500 hover:text-gray-700">Cancelar</button>
                         <button type="submit" disabled={processing}
@@ -83,6 +80,143 @@ function ModalAgregarAcademico({ periodo, facultades, onClose }) {
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    );
+}
+
+// ── Modal editar académico ─────────────────────────────────────────────────────
+function ModalEditarAcademico({ periodo, nomina, columnasAdicionales, onClose }) {
+    const initAdicionales = Object.fromEntries(
+        columnasAdicionales.map(col => [col, nomina.datos_adicionales?.[col] ?? ''])
+    );
+
+    const { data, setData, patch, processing, errors } = useForm({
+        rut:                    nomina.rut                    ?? '',
+        nombre:                 nomina.nombre                 ?? '',
+        numero_personal:        nomina.numero_personal        ?? '',
+        adscripcion_academica:  nomina.adscripcion_academica  ?? '',
+        unidad_superior:        nomina.unidad_superior        ?? '',
+        unidad:                 nomina.unidad                 ?? '',
+        nombre_posicion:        nomina.nombre_posicion        ?? '',
+        tipo_trabajador:        nomina.tipo_trabajador        ?? '',
+        fecha_inicio_contrato:  nomina.fecha_inicio_contrato  ?? '',
+        horas_contrato:         nomina.horas_contrato         ?? '',
+        categoria:              nomina.categoria              ?? '',
+        fecha_categorizacion:   nomina.fecha_categorizacion   ?? '',
+        datos_adicionales:      initAdicionales,
+    });
+
+    function submit(e) {
+        e.preventDefault();
+        patch(`/analista/periodos/${periodo.id}/nominas/${nomina.id}`, { onSuccess: onClose });
+    }
+
+    const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2D6B]/30';
+
+    const camposFijos = [
+        { label: 'RUT',                    key: 'rut',                    req: true },
+        { label: 'Nombre',                 key: 'nombre',                 req: true },
+        { label: 'N° Personal',            key: 'numero_personal' },
+        { label: 'Adscripción Académica',  key: 'adscripcion_academica' },
+        { label: 'Unidad Superior',        key: 'unidad_superior' },
+        { label: 'Unidad',                 key: 'unidad' },
+        { label: 'Nombre de la Posición',  key: 'nombre_posicion' },
+        { label: 'Tipo de Trabajador',     key: 'tipo_trabajador' },
+        { label: 'Horas de Contrato',      key: 'horas_contrato',         type: 'number' },
+    ];
+
+    return (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl flex flex-col max-h-[90vh]">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+                    <h3 className="text-sm font-semibold text-gray-800">Editar — {nomina.nombre || nomina.rut}</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+                </div>
+
+                <form onSubmit={submit} className="overflow-y-auto px-6 py-4 space-y-5">
+                    {/* Campos fijos */}
+                    <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Datos institucionales</p>
+                        <div className="grid grid-cols-2 gap-3">
+                            {camposFijos.map(({ label, key, req, type }) => (
+                                <div key={key}>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                                        {label}{req && <span className="text-red-500 ml-0.5">*</span>}
+                                    </label>
+                                    <input
+                                        type={type || 'text'}
+                                        value={data[key]}
+                                        onChange={e => setData(key, e.target.value)}
+                                        className={inputCls}
+                                    />
+                                    {errors[key] && <p className="mt-1 text-xs text-red-600">{errors[key]}</p>}
+                                </div>
+                            ))}
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Fecha Inicio Contrato</label>
+                                <input type="date" value={data.fecha_inicio_contrato}
+                                    onChange={e => setData('fecha_inicio_contrato', e.target.value)}
+                                    className={inputCls} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Categoría */}
+                    <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Categoría</p>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Categoría académica</label>
+                                <select value={data.categoria} onChange={e => setData('categoria', e.target.value)}
+                                    className={inputCls}>
+                                    <option value="">— Sin categoría —</option>
+                                    {['auxiliar', 'adjunto', 'titular', 'jerarquizado'].map(c => (
+                                        <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                                    ))}
+                                </select>
+                                {errors.categoria && <p className="mt-1 text-xs text-red-600">{errors.categoria}</p>}
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Fecha Categorización</label>
+                                <input type="date" value={data.fecha_categorizacion}
+                                    onChange={e => setData('fecha_categorizacion', e.target.value)}
+                                    className={inputCls} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Columnas adicionales */}
+                    {columnasAdicionales.length > 0 && (
+                        <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Columnas personalizadas</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                {columnasAdicionales.map(col => (
+                                    <div key={col}>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">{col}</label>
+                                        <input
+                                            type="text"
+                                            value={data.datos_adicionales[col] ?? ''}
+                                            onChange={e => setData('datos_adicionales', {
+                                                ...data.datos_adicionales,
+                                                [col]: e.target.value,
+                                            })}
+                                            className={inputCls}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </form>
+
+                <div className="flex gap-3 justify-end px-6 py-4 border-t border-gray-100 shrink-0">
+                    <button type="button" onClick={onClose} className="text-sm text-gray-500 hover:text-gray-700">Cancelar</button>
+                    <button onClick={submit} disabled={processing}
+                        className="bg-[#1B2D6B] text-white text-sm px-5 py-2 rounded-lg hover:bg-[#152558] disabled:opacity-60">
+                        {processing ? 'Guardando...' : 'Guardar cambios'}
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -106,7 +240,7 @@ const CAMPOS_SAPD = [
 
 // ── Panel importación Excel ───────────────────────────────────────────────────
 function PanelExcel({ periodo }) {
-    const { flash } = usePage().props;
+    const { flash, errors } = usePage().props;
     const preview   = flash?.excel_preview;
 
     const fileRef = useRef();
@@ -128,7 +262,7 @@ function PanelExcel({ periodo }) {
         const fd = new FormData();
         fd.append('archivo', fileRef.current.files[0]);
         router.post(
-            route('analista.periodos.nominas.preview-excel', periodo.id),
+            `/analista/periodos/${periodo.id}/nominas/preview-excel`,
             fd,
             { forceFormData: true, onFinish: () => setUploading(false) }
         );
@@ -138,7 +272,7 @@ function PanelExcel({ periodo }) {
         if (!preview?.path) return;
         setImportando(true);
         router.post(
-            route('analista.periodos.nominas.importar-excel', periodo.id),
+            `/analista/periodos/${periodo.id}/nominas/importar-excel`,
             { path: preview.path, tiene_encabezado: tieneEncabezado, mapeo },
             { onFinish: () => setImportando(false) }
         );
@@ -164,9 +298,14 @@ function PanelExcel({ periodo }) {
                 </button>
             </form>
 
+            {errors?.archivo && (
+                <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+                    {errors.archivo}
+                </div>
+            )}
+
             {preview && (
                 <div className="space-y-4 border-t border-gray-100 pt-4">
-                    {/* Vista previa */}
                     <div className="overflow-x-auto rounded border border-gray-200">
                         <table className="text-xs w-full">
                             <thead className="bg-gray-50">
@@ -237,7 +376,7 @@ function PanelExcel({ periodo }) {
                     {sinMapear.length > 0 && (
                         <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
                             <p className="text-xs font-medium text-amber-700 mb-1">
-                                {sinMapear.length} columna(s) no reconocida(s) — se ignorarán
+                                {sinMapear.length} columna(s) no reconocida(s) — se importarán como columnas extra
                             </p>
                             <p className="text-xs text-amber-600">{sinMapear.map(([, l]) => l).join(', ')}</p>
                         </div>
@@ -256,9 +395,74 @@ function PanelExcel({ periodo }) {
     );
 }
 
+// ── Panel columnas personalizadas ─────────────────────────────────────────────
+function PanelColumnas({ periodo, columnasAdicionales }) {
+    const { data, setData, post, processing, reset, errors } = useForm({ nombre_columna: '' });
+    const [eliminando, setEliminando] = useState(null);
+
+    function submit(e) {
+        e.preventDefault();
+        if (!data.nombre_columna.trim()) return;
+        post(`/analista/periodos/${periodo.id}/nominas/columna`, {
+            onSuccess: () => reset(),
+        });
+    }
+
+    function eliminar(col) {
+        if (!confirm(`¿Eliminar la columna "${col}" de toda la nómina? Se perderán los datos cargados en esa columna.`)) return;
+        setEliminando(col);
+        router.delete(`/analista/periodos/${periodo.id}/nominas/columna`,
+            { data: { nombre_columna: col }, onFinish: () => setEliminando(null) }
+        );
+    }
+
+    return (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
+            <p className="text-sm font-semibold text-gray-700">Columnas personalizadas</p>
+            <p className="text-xs text-gray-400">Agrega columnas extra a toda la nómina.</p>
+
+            <form onSubmit={submit} className="flex gap-2">
+                <input
+                    type="text"
+                    value={data.nombre_columna}
+                    onChange={e => setData('nombre_columna', e.target.value)}
+                    placeholder="Ej: Cargo interno"
+                    maxLength={60}
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#1B2D6B]/30"
+                />
+                <button type="submit" disabled={processing || !data.nombre_columna.trim()}
+                    className="text-xs bg-[#1B2D6B] text-white px-3 py-1.5 rounded-lg hover:bg-[#152558] disabled:opacity-50 whitespace-nowrap">
+                    {processing ? '...' : '+ Agregar'}
+                </button>
+            </form>
+            {errors?.nombre_columna && <p className="text-xs text-red-600">{errors.nombre_columna}</p>}
+
+            {columnasAdicionales.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                    {columnasAdicionales.map(col => (
+                        <span key={col}
+                            className="inline-flex items-center gap-1 text-[11px] bg-indigo-50 text-indigo-700 border border-indigo-200 pl-2 pr-1 py-0.5 rounded-full">
+                            {col}
+                            <button
+                                onClick={() => eliminar(col)}
+                                disabled={eliminando === col}
+                                title="Eliminar columna"
+                                className="text-indigo-400 hover:text-red-500 disabled:opacity-40 leading-none font-bold text-xs">
+                                {eliminando === col ? '…' : '×'}
+                            </button>
+                        </span>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ── Grilla de nómina ──────────────────────────────────────────────────────────
-function NominaGrid({ nominasEnPeriodo, periodo, editingId, obsInput, setObsInput,
-                      savingId, setEditingId, onQuitarLicencia, onConfirmarLicencia }) {
+function NominaGrid({ nominasEnPeriodo, periodo, columnasAdicionales,
+                      editingId, obsInput, setObsInput,
+                      savingId, setEditingId, onQuitarLicencia, onConfirmarLicencia,
+                      onEditar }) {
     if (nominasEnPeriodo.length === 0) {
         return (
             <div className="bg-white rounded-xl border border-dashed border-gray-300 p-10 text-center">
@@ -268,6 +472,10 @@ function NominaGrid({ nominasEnPeriodo, periodo, editingId, obsInput, setObsInpu
             </div>
         );
     }
+
+    const fixedHeaders = ['N° Personal', 'RUT', 'Nombre', 'Unidad Superior', 'Unidad',
+                          'Posición', 'Tipo', 'Fecha Ctto.', 'Horas', 'Categoría', 'Fecha Categ.'];
+    const allHeaders   = [...fixedHeaders, ...columnasAdicionales, 'Estado', ''];
 
     return (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -281,9 +489,10 @@ function NominaGrid({ nominasEnPeriodo, periodo, editingId, obsInput, setObsInpu
                 <table className="w-full text-xs">
                     <thead className="bg-gray-50 border-b border-gray-100">
                         <tr>
-                            {['N° Personal','RUT','Nombre','Unidad Superior','Unidad',
-                              'Posición','Tipo','Fecha Ctto.','Horas','Categoría','Fecha Categ.','Estado',''].map(h => (
-                                <th key={h} className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">{h}</th>
+                            {allHeaders.map((h, i) => (
+                                <th key={i} className={`px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap ${
+                                    columnasAdicionales.includes(h) ? 'bg-indigo-50 text-indigo-600' : ''
+                                }`}>{h}</th>
                             ))}
                         </tr>
                     </thead>
@@ -296,7 +505,7 @@ function NominaGrid({ nominasEnPeriodo, periodo, editingId, obsInput, setObsInpu
                                     <td className="px-3 py-2 font-mono text-gray-600">{n.rut || '—'}</td>
                                     <td className="px-3 py-2 font-medium text-gray-800 min-w-[160px]">
                                         <Link
-                                            href={route('analista.periodos.nominas.detalle', [periodo.id, n.id])}
+                                            href={`/analista/periodos/${periodo.id}/nominas/${n.id}/detalle`}
                                             className="hover:text-[#1B2D6B] hover:underline">
                                             {n.nombre || '—'}
                                         </Link>
@@ -316,28 +525,44 @@ function NominaGrid({ nominasEnPeriodo, periodo, editingId, obsInput, setObsInpu
                                         {n.categoria ? n.categoria.charAt(0).toUpperCase() + n.categoria.slice(1) : '—'}
                                     </td>
                                     <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{n.fecha_categorizacion ? formatDate(n.fecha_categorizacion) : '—'}</td>
+
+                                    {/* Columnas personalizadas */}
+                                    {columnasAdicionales.map(col => (
+                                        <td key={col} className="px-3 py-2 text-gray-600 max-w-[120px] truncate bg-indigo-50/30"
+                                            title={n.datos_adicionales?.[col] ?? ''}>
+                                            {n.datos_adicionales?.[col] || '—'}
+                                        </td>
+                                    ))}
+
                                     <td className="px-3 py-2">
                                         <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap ${
-                                            n.estado === 'pendiente'    ? 'bg-gray-100 text-gray-600' :
-                                            n.estado === 'en_carga'     ? 'bg-blue-50 text-blue-700' :
-                                            n.estado === 'evaluado'     ? 'bg-green-50 text-green-700' :
+                                            n.estado === 'pendiente'  ? 'bg-gray-100 text-gray-600' :
+                                            n.estado === 'en_carga'   ? 'bg-blue-50 text-blue-700' :
+                                            n.estado === 'evaluado'   ? 'bg-green-50 text-green-700' :
                                             'bg-gray-50 text-gray-500'
                                         }`}>
                                             {n.estado.replace('_', ' ')}
                                         </span>
                                     </td>
+
                                     <td className="px-3 py-2 whitespace-nowrap">
-                                        {n.con_licencia ? (
-                                            <button disabled={isSaving} onClick={() => onQuitarLicencia(n.id)}
-                                                className="text-[10px] text-gray-400 hover:text-red-500 disabled:opacity-40">
-                                                {isSaving ? '...' : 'Quitar caso'}
+                                        <div className="flex items-center gap-2">
+                                            <button onClick={() => onEditar(n)}
+                                                className="text-[10px] text-[#1B2D6B] hover:underline font-medium">
+                                                Editar
                                             </button>
-                                        ) : (
-                                            <button onClick={() => setEditingId(n.id)}
-                                                className="text-[10px] text-amber-600 hover:text-amber-800 font-medium">
-                                                + Caso especial
-                                            </button>
-                                        )}
+                                            {n.con_licencia ? (
+                                                <button disabled={isSaving} onClick={() => onQuitarLicencia(n.id)}
+                                                    className="text-[10px] text-gray-400 hover:text-red-500 disabled:opacity-40">
+                                                    {isSaving ? '...' : 'Quitar caso'}
+                                                </button>
+                                            ) : (
+                                                <button onClick={() => setEditingId(n.id)}
+                                                    className="text-[10px] text-amber-600 hover:text-amber-800 font-medium">
+                                                    + Caso
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             );
@@ -365,29 +590,31 @@ function NominaGrid({ nominasEnPeriodo, periodo, editingId, obsInput, setObsInpu
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
-export default function NominaCreate({ periodo, facultades, academicos, nominasEnPeriodo }) {
+export default function NominaCreate({ periodo, facultades, academicos, nominasEnPeriodo, columnas_adicionales }) {
     const { flash } = usePage().props;
-    const [editingId, setEditingId] = useState(null);
-    const [obsInput, setObsInput]   = useState('');
-    const [savingId, setSavingId]   = useState(null);
-    const [showModal, setShowModal] = useState(false);
+    const [editingId, setEditingId]         = useState(null);
+    const [obsInput, setObsInput]           = useState('');
+    const [savingId, setSavingId]           = useState(null);
+    const [showModal, setShowModal]         = useState(false);
+    const [editandoNomina, setEditandoNomina] = useState(null);
 
     function confirmarLicencia(nominaId) {
         setSavingId(nominaId);
-        router.patch(route('analista.nominas.licencia', nominaId),
+        router.patch(`/analista/nominas/${nominaId}/licencia`,
             { con_licencia: true, observacion_licencia: obsInput },
             { preserveScroll: true, onFinish: () => setSavingId(null), onSuccess: () => { setEditingId(null); setObsInput(''); } }
         );
     }
     function quitarLicencia(nominaId) {
         setSavingId(nominaId);
-        router.patch(route('analista.nominas.licencia', nominaId),
+        router.patch(`/analista/nominas/${nominaId}/licencia`,
             { con_licencia: false, observacion_licencia: null },
             { preserveScroll: true, onFinish: () => setSavingId(null) }
         );
     }
 
     const totalLicencias = nominasEnPeriodo.filter(n => n.con_licencia).length;
+    const columnasAdicionales = columnas_adicionales ?? [];
 
     return (
         <>
@@ -404,13 +631,18 @@ export default function NominaCreate({ periodo, facultades, academicos, nominasE
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <a href={route('analista.nominas.plantilla')}
+                        <a href="/analista/nominas/plantilla"
                             className="text-xs border border-gray-300 text-gray-600 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors">
                             ↓ Plantilla UCM
                         </a>
-                        <a href={route('analista.periodos.nominas.exportar', periodo.id)}
+                        <a href={`/analista/periodos/${periodo.id}/nominas/exportar`}
                             className="text-xs border border-gray-300 text-gray-600 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors">
                             ↓ Exportar Excel
+                        </a>
+                        <a href={`/analista/periodos/${periodo.id}/nominas/exportar?solo_excelentes=1`}
+                            title="Genera Excel con académicos de concepto Excelente (incentivos)"
+                            className="text-xs border border-amber-400 text-amber-700 hover:bg-amber-50 px-3 py-1.5 rounded-lg transition-colors">
+                            ↓ Exportar Excelentes
                         </a>
                         <button onClick={() => setShowModal(true)}
                             className="text-xs bg-[#1B2D6B] text-white px-3 py-1.5 rounded-lg hover:bg-[#152558] transition-colors">
@@ -447,15 +679,23 @@ export default function NominaCreate({ periodo, facultades, academicos, nominasE
                                         <span className="text-sm font-semibold text-amber-600">{totalLicencias}</span>
                                     </div>
                                 )}
+                                {columnasAdicionales.length > 0 && (
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-500">Cols. extra</span>
+                                        <span className="text-sm font-semibold text-indigo-600">{columnasAdicionales.length}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <PanelExcel periodo={periodo} />
+                        <PanelColumnas periodo={periodo} columnasAdicionales={columnasAdicionales} />
                     </div>
 
                     <div className="lg:col-span-3">
                         <NominaGrid
                             nominasEnPeriodo={nominasEnPeriodo}
                             periodo={periodo}
+                            columnasAdicionales={columnasAdicionales}
                             editingId={editingId}
                             obsInput={obsInput}
                             setObsInput={setObsInput}
@@ -463,6 +703,7 @@ export default function NominaCreate({ periodo, facultades, academicos, nominasE
                             setEditingId={setEditingId}
                             onQuitarLicencia={quitarLicencia}
                             onConfirmarLicencia={confirmarLicencia}
+                            onEditar={setEditandoNomina}
                         />
                     </div>
                 </div>
@@ -473,6 +714,15 @@ export default function NominaCreate({ periodo, facultades, academicos, nominasE
                     periodo={periodo}
                     facultades={facultades}
                     onClose={() => setShowModal(false)}
+                />
+            )}
+
+            {editandoNomina && (
+                <ModalEditarAcademico
+                    periodo={periodo}
+                    nomina={editandoNomina}
+                    columnasAdicionales={columnasAdicionales}
+                    onClose={() => setEditandoNomina(null)}
                 />
             )}
         </>

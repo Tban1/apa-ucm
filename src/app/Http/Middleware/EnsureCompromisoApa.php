@@ -43,10 +43,7 @@ class EnsureCompromisoApa
             return $next($request);
         }
 
-        $tieneCompromiso = CompromisoApa::where('nomina_id', $nomina->id)
-            ->where('periodo_id', $periodo->id)
-            ->whereNotNull('confirmado_en')
-            ->exists();
+        $tieneCompromiso = $nomina->tieneCompromisoApaConfirmado();
 
         if (!$tieneCompromiso) {
             if ($request->header('X-Inertia')) {

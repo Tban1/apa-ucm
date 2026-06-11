@@ -80,13 +80,14 @@ class DemoSeeder extends Seeder
         $inicio = Carbon::parse($periodo->fecha_inicio);
 
         $fines = [
-            ['etapa' => 'carga_evidencias',       'fecha_fin' => $inicio->copy()->addDays(30)->toDateString()],
-            ['etapa' => 'validacion_secretario',  'fecha_fin' => $inicio->copy()->addDays(60)->toDateString()],
-            ['etapa' => 'evaluacion_cca',         'fecha_fin' => $inicio->copy()->addDays(90)->toDateString()],
-            ['etapa' => 'consejo_facultad',       'fecha_fin' => $inicio->copy()->addDays(110)->toDateString()],
-            ['etapa' => 'apelaciones',            'fecha_fin' => $inicio->copy()->addDays(130)->toDateString()],
-            ['etapa' => 'revision_vicerrectoria', 'fecha_fin' => $inicio->copy()->addDays(140)->toDateString()],
-            ['etapa' => 'cierre',                 'fecha_fin' => $inicio->copy()->addDays(150)->toDateString()],
+            ['etapa' => 'carga_evidencias',        'fecha_fin' => $inicio->copy()->addDays(30)->toDateString()],
+            ['etapa' => 'validacion_secretario',   'fecha_fin' => $inicio->copy()->addDays(30)->toDateString()],
+            ['etapa' => 'informe_jefatura',        'fecha_fin' => $inicio->copy()->addDays(30)->toDateString()],
+            ['etapa' => 'evaluacion_cca',          'fecha_fin' => $inicio->copy()->addDays(60)->toDateString()],
+            ['etapa' => 'comunicacion_resultados', 'fecha_fin' => $inicio->copy()->addDays(80)->toDateString()],
+            ['etapa' => 'apelaciones',             'fecha_fin' => $inicio->copy()->addDays(100)->toDateString()],
+            ['etapa' => 'registro_ccda',           'fecha_fin' => $inicio->copy()->addDays(115)->toDateString()],
+            ['etapa' => 'revision_vicerrectoria',  'fecha_fin' => $inicio->copy()->addDays(130)->toDateString()],
         ];
 
         $preparado = Cronograma::prepararParaGuardar($inicio->toDateString(), $fines);

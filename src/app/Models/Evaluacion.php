@@ -16,6 +16,7 @@ class Evaluacion extends Model
         'nomina_id', 'evaluador_id',
         'puntaje_docencia', 'puntaje_investigacion',
         'puntaje_vinculacion', 'puntaje_gestion', 'puntaje_formacion',
+        'extra_otras_actividades',
         'comentario', 'es_apelacion',
         'vigente_hasta', 'sin_calificacion', 'motivo_sc',
     ];
@@ -23,14 +24,15 @@ class Evaluacion extends Model
     protected function casts(): array
     {
         return [
-            'es_apelacion'          => 'boolean',
-            'sin_calificacion'      => 'boolean',
-            'vigente_hasta'         => 'date',
-            'puntaje_docencia'      => 'decimal:1',
-            'puntaje_investigacion' => 'decimal:1',
-            'puntaje_vinculacion'   => 'decimal:1',
-            'puntaje_gestion'       => 'decimal:1',
-            'puntaje_formacion'     => 'decimal:1',
+            'es_apelacion'             => 'boolean',
+            'sin_calificacion'         => 'boolean',
+            'vigente_hasta'            => 'date',
+            'puntaje_docencia'         => 'decimal:1',
+            'puntaje_investigacion'    => 'decimal:1',
+            'puntaje_vinculacion'      => 'decimal:1',
+            'puntaje_gestion'          => 'decimal:1',
+            'puntaje_formacion'        => 'decimal:1',
+            'extra_otras_actividades'  => 'decimal:1',
         ];
     }
 

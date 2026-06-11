@@ -216,12 +216,15 @@
         /* ── Firmas ─────────────────────────────── */
         .firma-section {
             display: flex;
-            gap: 40px;
-            margin-top: 50px;
+            flex-wrap: wrap;
+            gap: 30px 24px;
+            margin-top: 55px;
         }
-        .firma-box { flex: 1; text-align: center; }
-        .firma-line { border-top: 1px solid #555; margin-bottom: 4px; }
-        .firma-label { font-size: 9px; color: #555; }
+        .firma-box { flex: 1 1 calc(33% - 24px); min-width: 130px; text-align: center; }
+        .firma-space { height: 36px; }
+        .firma-line { border-top: 1px solid #444; margin-bottom: 5px; }
+        .firma-name { font-size: 10px; color: #111; font-weight: bold; margin-bottom: 2px; min-height: 13px; }
+        .firma-label { font-size: 9px; color: #555; line-height: 1.4; }
     </style>
 </head>
 <body>
@@ -443,18 +446,42 @@
 @endif
 
 {{-- ── FIRMAS ──────────────────────────────────────────── --}}
+@php
+    $firmantes = $evaluaciones->pluck('evaluador')->filter()->unique('id')->values();
+    $firmante1 = $firmantes->get(0);
+    $firmante2 = $firmantes->get(1);
+    $firmante3 = $firmantes->get(2);
+@endphp
 <div class="firma-section">
     <div class="firma-box">
+        <div class="firma-space"></div>
         <div class="firma-line"></div>
-        <p class="firma-label">Presidente de la Comisión Calificadora Académica</p>
+        <p class="firma-name">{{ $firmante1?->name ?? '' }}</p>
+        <p class="firma-label">Presidente(a) Comisión Calificadora Académica</p>
     </div>
     <div class="firma-box">
+        <div class="firma-space"></div>
         <div class="firma-line"></div>
+        <p class="firma-name">{{ $firmante2?->name ?? '' }}</p>
+        <p class="firma-label">Integrante Comisión Calificadora Académica</p>
+    </div>
+    <div class="firma-box">
+        <div class="firma-space"></div>
+        <div class="firma-line"></div>
+        <p class="firma-name">{{ $firmante3?->name ?? '' }}</p>
+        <p class="firma-label">Integrante Comisión Calificadora Académica</p>
+    </div>
+    <div class="firma-box">
+        <div class="firma-space"></div>
+        <div class="firma-line"></div>
+        <p class="firma-name">{{ $academico->name }}</p>
         <p class="firma-label">Académico/a Evaluado/a — Recepción conforme</p>
     </div>
     <div class="firma-box">
+        <div class="firma-space"></div>
         <div class="firma-line"></div>
-        <p class="firma-label">Timbre y Fecha</p>
+        <p class="firma-name"></p>
+        <p class="firma-label">Secretario/a de Facultad — Timbre y Fecha</p>
     </div>
 </div>
 

@@ -3,21 +3,493 @@
 namespace App\Http\Controllers;
 
 use App\Models\Acta;
+use App\Models\Apelacion;
 use App\Models\CalificacionFinal;
+use App\Models\CategoriaApa;
+use App\Models\CompromisoApa;
+use App\Models\Cronograma;
 use App\Models\Evaluacion;
+use App\Models\Evidencia;
 use App\Models\Facultad;
 use App\Models\Nomina;
+use App\Models\Notificacion;
 use App\Models\Periodo;
 use App\Models\PlazoFacultad;
 use App\Models\ReporteHistorial;
+use App\Models\VerificacionCcda;
 use App\Services\CalificacionCadService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AnalistaCCDAController extends Controller
 {
+    // ─── Registro CCDA ───────────────────────────────────────────────────────
+
+    public function registroCcda(): Response
+    {
+        $periodo = Periodo::where('estado', 'activo')->latest()->first();
+
+        $etapa       = null;
+        $facultades  = collect();
+
+        if ($periodo) {
+            $etapa = Cronograma::where('periodo_id', $periodo->id)
+                ->where('etapa', 'registro_ccda')
+                ->first();
+
+            $verificaciones = VerificacionCcda::where('periodo_id', $periodo->id)
+                ->get()
+                ->keyBy('facultad_id');
+
+            $facultades = Facultad::orderBy('nombre')
+                ->get()
+                ->map(function (Facultad $f) use ($periodo, $verificaciones) {
+                    $nominas = Nomina::with([
+                        'academico',
+                        'apelacion',
+                        'calificacionFinal',
+                        'evaluaciones' => fn ($q) => $q->where('es_apelacion', false),
+                    ])
+                        ->where('periodo_id', $periodo->id)
+                        ->whereHas('academico', fn ($q) => $q->where('facultad_id', $f->id))
+                        ->get();
+
+                    if ($nominas->isEmpty()) {
+                        return null;
+                    }
+
+                    $total    = $nominas->count();
+                    $evaluados = $nominas->whereIn('estado', ['evaluado', 'cerrado'])->count();
+
+                    $apelPendientes = $nominas->filter(
+                        fn ($n) => $n->apelacion && in_array($n->apelacion->estado, ['solicitada', 'en_revision'])
+                    )->count();
+
+                    $ccdaPendientes = $nominas->filter(
+                        fn ($n) => $n->estado === 'en_evaluacion'
+                            && $n->apelacion?->estado === 'resuelta'
+                            && ($n->apelacion->destino ?? 'cca') === 'ccda'
+                    )->count();
+
+                    $actaCierre = Acta::where('periodo_id', $periodo->id)
+                        ->where('facultad_id', $f->id)
+                        ->where('tipo', 'cierre_proceso')
+                        ->exists();
+
+                    $v = $verificaciones->get($f->id);
+
+                    $academicos = $nominas->map(function (Nomina $n) {
+                        $calif = $n->calificacionFinal;
+                        $nota  = $calif ? (float) $calif->nota_final : null;
+
+                        $notaConceptoOk = false;
+                        if ($nota !== null && $calif) {
+                            $conceptoEsperado = CalificacionCadService::conceptoDesdeNota($nota);
+                            $notaConceptoOk   = $conceptoEsperado === $calif->calificacion;
+                        }
+
+                        $apelResuelta = !$n->apelacion
+                            || !in_array($n->apelacion->estado, ['solicitada', 'en_revision']);
+
+                        $retroRegistrada = $n->evaluaciones
+                            ->whereNotNull('comentario')
+                            ->where('comentario', '!=', '')
+                            ->isNotEmpty();
+
+                        $todosOk = $nota !== null && $notaConceptoOk && $apelResuelta && $retroRegistrada;
+                        $estado  = !$nota ? 'pendiente'
+                            : ($todosOk ? 'verificado' : 'con_observaciones');
+
+                        return [
+                            'id'               => $n->id,
+                            'nombre'           => $n->academico->name,
+                            'rut'              => $n->academico->rut,
+                            'nota'             => $nota ? number_format($nota, 1) : null,
+                            'concepto'         => $calif?->calificacionLabel(),
+                            'nota_concepto_ok' => $notaConceptoOk,
+                            'apel_resuelta'    => $apelResuelta,
+                            'retro_registrada' => $retroRegistrada,
+                            'estado'           => $estado,
+                            'apelacion_info'   => $n->apelacion ? [
+                                'estado'       => $n->apelacion->estado,
+                                'nota_original' => $n->apelacion->nota_original,
+                                'nota_final'   => $n->apelacion->nota_final,
+                            ] : null,
+                        ];
+                    })->values();
+
+                    return [
+                        'id'        => $f->id,
+                        'nombre'    => $f->nombre,
+                        'academicos' => $academicos,
+                        'stats'  => [
+                            'total'                => $total,
+                            'evaluados'            => $evaluados,
+                            'apel_pendientes'      => $apelPendientes,
+                            'ccda_pendientes'      => $ccdaPendientes,
+                            'proceso_cerrado'      => $actaCierre,
+                            'lista_para_verificar' => $evaluados === $total
+                                && $apelPendientes === 0
+                                && $ccdaPendientes === 0
+                                && $actaCierre,
+                        ],
+                        'verificacion' => $v ? [
+                            'id'                   => $v->id,
+                            'doc_fisica_archivada'  => $v->doc_fisica_archivada,
+                            'notas_comunicadas'     => $v->notas_comunicadas,
+                            'observaciones'         => $v->observaciones,
+                            'verificado_en'         => $v->verificado_en?->format('d/m/Y H:i'),
+                        ] : null,
+                    ];
+                })
+                ->filter()
+                ->values();
+        }
+
+        $totalFacultades      = $facultades->count();
+        $facultadesVerificadas = $facultades->filter(
+            fn ($f) => $f['verificacion'] && $f['verificacion']['verificado_en'] !== null
+        )->count();
+
+        return Inertia::render('AnalistaCCDA/RegistroCcda', [
+            'periodo'              => $periodo?->only(['id', 'anio', 'nombre']),
+            'etapa'                => $etapa ? [
+                'fecha_inicio' => $etapa->fecha_inicio->format('d/m/Y'),
+                'fecha_fin'    => $etapa->fecha_fin->format('d/m/Y'),
+                'esta_vigente' => $etapa->estaVigente(),
+            ] : null,
+            'facultades'           => $facultades,
+            'total_facultades'     => $totalFacultades,
+            'facultades_verificadas' => $facultadesVerificadas,
+        ]);
+    }
+
+    public function storeVerificacion(Request $request, Facultad $facultad)
+    {
+        $periodo = Periodo::where('estado', 'activo')->latest()->first();
+
+        if (!$periodo) {
+            return back()->with('error', 'No hay período activo.');
+        }
+
+        $data = $request->validate([
+            'doc_fisica_archivada' => ['boolean'],
+            'notas_comunicadas'    => ['boolean'],
+            'observaciones'        => ['nullable', 'string', 'max:1000'],
+            'cerrar'               => ['sometimes', 'boolean'],
+        ]);
+
+        $cerrar = (bool) ($data['cerrar'] ?? false);
+        unset($data['cerrar']);
+
+        $verificacion = VerificacionCcda::updateOrCreate(
+            ['periodo_id' => $periodo->id, 'facultad_id' => $facultad->id],
+            array_merge($data, [
+                'verificado_por' => auth()->id(),
+                'verificado_en'  => $cerrar ? now() : null,
+            ])
+        );
+
+        $msg = $cerrar
+            ? "Verificación de {$facultad->nombre} cerrada correctamente."
+            : "Cambios guardados para {$facultad->nombre}.";
+
+        return back()->with('success', $msg);
+    }
+
+    // ─── Apelaciones 2do nivel CCDA ──────────────────────────────────────────
+
+    public function apelaciones(): Response
+    {
+        $periodo    = Periodo::where('estado', 'activo')->latest()->first();
+        $pendientes = collect();
+
+        if ($periodo) {
+            $pendientes = Nomina::with([
+                'academico.facultad',
+                'apelacion',
+                'calificacionFinal',
+            ])
+                ->where('periodo_id', $periodo->id)
+                ->where('estado', 'en_evaluacion')
+                ->whereHas('apelaciones', fn ($q) =>
+                    $q->where('estado', 'resuelta')->where('destino', 'ccda')
+                )
+                ->get()
+                ->map(function (Nomina $n) {
+                    $cf = $n->calificacionFinal()->where('es_apelacion', false)->first();
+                    $cfAp = $n->calificacionFinal()->where('es_apelacion', true)->first();
+
+                    return [
+                        'id'       => $n->id,
+                        'academico' => [
+                            'name' => $n->academico->name,
+                            'rut'  => $n->academico->rut,
+                        ],
+                        'facultad'              => $n->academico->facultad?->nombre,
+                        'categoria'             => CalificacionCadService::labelCategoria($n->categoriaEfectiva()),
+                        'calificacion_original' => $cf ? [
+                            'nota_final'  => (float) $cf->nota_final,
+                            'concepto'    => CalificacionCadService::labelConcepto($cf->calificacion),
+                        ] : null,
+                        'ya_resuelta'           => $cfAp !== null,
+                        'concepto_resolucion'   => $cfAp
+                            ? CalificacionCadService::labelConcepto($cfAp->calificacion)
+                            : null,
+                    ];
+                });
+        }
+
+        return Inertia::render('AnalistaCCDA/Apelaciones', [
+            'periodo'    => $periodo?->only(['id', 'anio', 'nombre']),
+            'pendientes' => $pendientes->values(),
+        ]);
+    }
+
+    public function showApelacion(Nomina $nomina): Response
+    {
+        $apelacion = $nomina->apelaciones()
+            ->where('estado', 'resuelta')
+            ->where('destino', 'ccda')
+            ->latest()
+            ->firstOrFail();
+
+        if ($nomina->estado !== 'en_evaluacion') {
+            return redirect()->route('analista.apelaciones')
+                ->with('error', 'Este expediente no está en evaluación CCDA.');
+        }
+
+        $nomina->load(['academico.facultad', 'academico.departamento', 'compromisoApa', 'compromisos']);
+
+        $user      = auth()->user();
+        $categorias = CategoriaApa::orderBy('orden')->get();
+        $evidencias = $nomina->evidenciasApelacion()->with('categoria')->get();
+
+        $evidenciasPorCategoria = [];
+        foreach ($evidencias as $ev) {
+            $evidenciasPorCategoria[$ev->categoria_id][] = [
+                'id'             => $ev->id,
+                'nombre_archivo' => $ev->nombre_archivo,
+                'tamano'         => $ev->tamanoFormateado(),
+                'descripcion'    => $ev->descripcion,
+                'created_at'     => $ev->created_at->format('d/m/Y H:i'),
+                'url_descarga'   => route('analista.apelaciones.evidencia.download', [$nomina->id, $ev->id]),
+            ];
+        }
+
+        $categoria  = $nomina->categoriaEfectiva();
+        $compromiso = $nomina->compromisoApa;
+        $pesos      = CalificacionCadService::pesosDesdeCompromiso($compromiso, $categoria);
+        $sinCompromiso = !$compromiso || !$compromiso->estaConfirmado();
+
+        $categoriasConPeso = $categorias->map(fn ($c) => [
+            'id'     => $c->id,
+            'nombre' => $c->nombre,
+            'slug'   => $c->slug,
+            'peso'   => $pesos[CalificacionCadService::SLUG_A_REGLAMENTO[$c->slug] ?? $c->slug] ?? 0,
+        ]);
+
+        $miEvaluacion = Evaluacion::where('nomina_id', $nomina->id)
+            ->where('evaluador_id', $user->id)
+            ->where('es_apelacion', true)
+            ->first();
+
+        $calificacionOriginal = $nomina->calificacionFinal()->where('es_apelacion', false)->first();
+        $calificacionFinalAp  = $nomina->calificacionFinal()->where('es_apelacion', true)->first();
+
+        return Inertia::render('AnalistaCCDA/EvaluarApelacion', [
+            'nomina' => [
+                'id'           => $nomina->id,
+                'estado'       => $nomina->estado,
+                'con_licencia' => $nomina->con_licencia,
+                'academico'    => [
+                    'name'                => $nomina->academico->name,
+                    'rut'                 => $nomina->academico->rut,
+                    'email'               => $nomina->academico->email,
+                    'facultad'            => $nomina->academico->facultad?->nombre,
+                    'departamento'        => $nomina->academico->departamento?->nombre,
+                    'categoria_academica' => CalificacionCadService::labelCategoria($categoria),
+                    'categoria_key'       => $categoria,
+                    'nota_anterior'       => $nomina->notaAnterior(),
+                    'concepto_anterior'   => $nomina->academico->concepto_anterior,
+                ],
+            ],
+            'apelacion' => [
+                'motivo'     => $apelacion->motivo,
+                'resolucion' => $apelacion->resolucion,
+            ],
+            'calificacionOriginal' => $calificacionOriginal ? [
+                'nota_final'   => (float) $calificacionOriginal->nota_final,
+                'concepto'     => CalificacionCadService::labelConcepto($calificacionOriginal->calificacion),
+                'observacion'  => $calificacionOriginal->observacion,
+            ] : null,
+            'categorias'             => $categoriasConPeso,
+            'pesosReglamento'        => $pesos,
+            'evidenciasPorCategoria' => $evidenciasPorCategoria,
+            'miEvaluacion'           => $miEvaluacion ? [
+                'puntaje_docencia'        => (float) $miEvaluacion->puntaje_docencia,
+                'puntaje_investigacion'   => (float) $miEvaluacion->puntaje_investigacion,
+                'puntaje_vinculacion'     => (float) $miEvaluacion->puntaje_vinculacion,
+                'puntaje_gestion'         => (float) $miEvaluacion->puntaje_gestion,
+                'puntaje_formacion'       => (float) $miEvaluacion->puntaje_formacion,
+                'extra_otras_actividades' => (float) ($miEvaluacion->extra_otras_actividades ?? 0),
+                'sin_calificacion'        => (bool) $miEvaluacion->sin_calificacion,
+                'motivo_sc'               => $miEvaluacion->motivo_sc,
+                'comentario'              => $miEvaluacion->comentario,
+                'nota_final'              => $miEvaluacion->notaFinalCad($categoria, $compromiso),
+            ] : null,
+            'calificacionFinal' => $calificacionFinalAp ? [
+                'nota_final'    => (float) $calificacionFinalAp->nota_final,
+                'calificacion'  => $calificacionFinalAp->calificacion,
+                'concepto_label'=> CalificacionCadService::labelConcepto($calificacionFinalAp->calificacion),
+                'fecha'         => $calificacionFinalAp->fecha->format('d/m/Y'),
+                'observacion'   => $calificacionFinalAp->observacion,
+            ] : null,
+            'sinCompromisoApa'     => $sinCompromiso,
+            'compromisosSemestres' => $nomina->compromisos
+                ->where('confirmado_en', '!=', null)
+                ->map(fn ($c) => [
+                    'semestre'           => $c->semestre,
+                    'label'              => CompromisoApa::labelSemestre($c->semestre),
+                    'pct_docencia'       => (float) $c->pct_docencia,
+                    'pct_investigacion'  => (float) $c->pct_investigacion,
+                    'pct_extension'      => (float) $c->pct_extension,
+                    'pct_administracion' => (float) $c->pct_administracion,
+                ])->values(),
+        ]);
+    }
+
+    public function storeApelacion(Request $request, Nomina $nomina)
+    {
+        $apelacion = $nomina->apelaciones()
+            ->where('estado', 'resuelta')
+            ->where('destino', 'ccda')
+            ->latest()
+            ->firstOrFail();
+
+        if ($nomina->estado !== 'en_evaluacion') {
+            return back()->with('error', 'Expediente no disponible para evaluación CCDA.');
+        }
+
+        $user = auth()->user();
+
+        $data = $request->validate([
+            'sin_calificacion'        => ['sometimes', 'boolean'],
+            'motivo_sc'               => ['nullable', 'string', 'max:2000', 'required_if:sin_calificacion,true'],
+            'puntaje_docencia'        => ['nullable', 'numeric', 'min:1', 'max:5'],
+            'puntaje_investigacion'   => ['nullable', 'numeric', 'min:1', 'max:5'],
+            'puntaje_vinculacion'     => ['nullable', 'numeric', 'min:1', 'max:5'],
+            'puntaje_gestion'         => ['nullable', 'numeric', 'min:1', 'max:5'],
+            'extra_otras_actividades' => ['nullable', 'numeric', 'in:0,0.1,0.2,0.3'],
+            'comentario'              => ['nullable', 'string', 'max:600'],
+        ]);
+
+        $sinCalificacion = (bool) ($data['sin_calificacion'] ?? false);
+
+        if (!$sinCalificacion) {
+            foreach (['puntaje_docencia', 'puntaje_investigacion', 'puntaje_vinculacion', 'puntaje_gestion'] as $campo) {
+                if (!isset($data[$campo])) {
+                    return back()->withErrors([$campo => 'La nota es obligatoria.']);
+                }
+            }
+        }
+
+        $categoria = $nomina->categoriaEfectiva();
+
+        Evaluacion::updateOrCreate(
+            ['nomina_id' => $nomina->id, 'evaluador_id' => $user->id, 'es_apelacion' => true],
+            array_merge($data, [
+                'sin_calificacion' => $sinCalificacion,
+                'motivo_sc'        => $sinCalificacion ? ($data['motivo_sc'] ?? null) : null,
+                'vigente_hasta'    => CalificacionCadService::vigenteHasta($categoria)->toDateString(),
+            ])
+        );
+
+        return back()->with('success', 'Evaluación CCDA guardada. Revise los valores y finalice para registrar la calificación.');
+    }
+
+    public function finalizeApelacion(Request $request, Nomina $nomina)
+    {
+        $apelacion = $nomina->apelaciones()
+            ->where('estado', 'resuelta')
+            ->where('destino', 'ccda')
+            ->latest()
+            ->firstOrFail();
+
+        if ($nomina->estado !== 'en_evaluacion') {
+            return back()->with('error', 'Expediente no disponible para finalización CCDA.');
+        }
+
+        if ($nomina->calificacionFinal()->where('es_apelacion', true)->exists()) {
+            return back()->with('error', 'Este expediente ya tiene calificación CCDA registrada.');
+        }
+
+        $user = auth()->user();
+
+        $evaluaciones = Evaluacion::where('nomina_id', $nomina->id)
+            ->where('es_apelacion', true)
+            ->get();
+
+        if ($evaluaciones->isEmpty()) {
+            return back()->with('error', 'Debe guardar la evaluación antes de finalizar.');
+        }
+
+        $data = $request->validate([
+            'observacion' => ['nullable', 'string', 'max:600'],
+        ]);
+
+        $categoria  = $nomina->categoriaEfectiva();
+        $compromiso = CompromisoApa::where('nomina_id', $nomina->id)->first();
+
+        $notasCad  = $evaluaciones->map(
+            fn ($e) => CalificacionCadService::calcularDesdeEvaluacion($e, $categoria, $compromiso)
+        );
+        $notaFinal    = round($notasCad->avg(), 2);
+        $concepto     = CalificacionCadService::conceptoDesdeNota($notaFinal);
+        $labelCalif   = CalificacionCadService::labelConcepto($concepto);
+
+        CalificacionFinal::create([
+            'nomina_id'       => $nomina->id,
+            'puntaje_total'   => (int) round($notaFinal * 20),
+            'nota_final'      => $notaFinal,
+            'calificacion'    => $concepto,
+            'determinada_por' => $user->id,
+            'fecha'           => now()->toDateString(),
+            'observacion'     => $data['observacion'] ?? null,
+            'es_apelacion'    => true,
+        ]);
+
+        $nomina->update(['estado' => 'evaluado']);
+
+        Notificacion::create([
+            'user_id' => $nomina->user_id,
+            'tipo'    => 'calificacion_final',
+            'titulo'  => 'Resolución de apelación CCDA',
+            'mensaje' => "La CCDA ha resuelto su apelación. Calificación definitiva: {$labelCalif} ({$notaFinal}/5.0).",
+        ]);
+
+        return back()->with('success', "Apelación CCDA resuelta: {$labelCalif} ({$notaFinal}/5.0).");
+    }
+
+    public function downloadEvidenciaApelacion(Nomina $nomina, Evidencia $evidencia): StreamedResponse
+    {
+        if ($evidencia->nomina_id !== $nomina->id || !$evidencia->es_apelacion) {
+            abort(404);
+        }
+
+        if (!Storage::disk('public')->exists($evidencia->ruta)) {
+            abort(404);
+        }
+
+        return Storage::disk('public')->download($evidencia->ruta, $evidencia->nombre_archivo);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+
     public function estadoProceso(): Response
     {
         $periodos = Periodo::orderByDesc('anio')->get(['id', 'anio', 'nombre', 'estado']);

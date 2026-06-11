@@ -13,27 +13,30 @@ class Cronograma extends Model
     public const ETAPAS = [
         'carga_evidencias',
         'validacion_secretario',
+        'informe_jefatura',
         'evaluacion_cca',
-        'consejo_facultad',
+        'comunicacion_resultados',
         'apelaciones',
+        'registro_ccda',
         'revision_vicerrectoria',
-        'cierre',
     ];
 
     public const ETIQUETAS = [
-        'carga_evidencias'       => 'Carga de Evidencias',
-        'validacion_secretario'  => 'Validación Secretario',
-        'evaluacion_cca'         => 'Evaluación CCA',
-        'consejo_facultad'       => 'Consejo de Facultad',
-        'apelaciones'            => 'Apelaciones',
-        'revision_vicerrectoria' => 'Revisión Vicerrectoría',
-        'cierre'                 => 'Cierre',
+        'carga_evidencias'        => 'Carga de Evidencias',
+        'validacion_secretario'   => 'Validación Secretario',
+        'informe_jefatura'        => 'Informe Jefatura',
+        'evaluacion_cca'          => 'Evaluación CCA',
+        'comunicacion_resultados' => 'Comunicación de Resultados',
+        'apelaciones'             => 'Apelaciones',
+        'registro_ccda'           => 'Registro CCDA',
+        'revision_vicerrectoria'  => 'Revisión Vicerrectoría',
     ];
 
     /** Etapas que inician en paralelo con el período */
     public const ETAPAS_PARALELAS = [
         'carga_evidencias',
         'validacion_secretario',
+        'informe_jefatura',
     ];
 
     protected $fillable = [
@@ -72,13 +75,13 @@ class Cronograma extends Model
     public static function calcularFechaInicio(string $etapa, string $periodoInicio, array $finesPorEtapa): string
     {
         return match ($etapa) {
-            'carga_evidencias', 'validacion_secretario' => $periodoInicio,
-            'evaluacion_cca'         => $finesPorEtapa['carga_evidencias'],
-            'consejo_facultad'       => $finesPorEtapa['evaluacion_cca'],
-            'apelaciones'            => $finesPorEtapa['consejo_facultad'],
-            'revision_vicerrectoria' => $finesPorEtapa['apelaciones'],
-            'cierre'                 => $finesPorEtapa['revision_vicerrectoria'],
-            default                  => throw new \InvalidArgumentException("Etapa desconocida: {$etapa}"),
+            'carga_evidencias', 'validacion_secretario', 'informe_jefatura' => $periodoInicio,
+            'evaluacion_cca'          => $finesPorEtapa['validacion_secretario'],
+            'comunicacion_resultados' => $finesPorEtapa['evaluacion_cca'],
+            'apelaciones'             => $finesPorEtapa['comunicacion_resultados'],
+            'registro_ccda'           => $finesPorEtapa['apelaciones'],
+            'revision_vicerrectoria'  => $finesPorEtapa['registro_ccda'],
+            default                   => throw new \InvalidArgumentException("Etapa desconocida: {$etapa}"),
         };
     }
 

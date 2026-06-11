@@ -24,7 +24,7 @@ export default function NominaDetalle({ periodo, nomina, historial_calificacione
                 <div className="flex items-center gap-2 text-sm text-gray-500 -mt-4 mb-6">
                     <Link href="/analista/periodos" className="hover:text-gray-700">Períodos</Link>
                     <span>/</span>
-                    <Link href={route('analista.periodos.nominas.create', periodo.id)}
+                    <Link href={`/analista/periodos/${periodo.id}/nominas/crear`}
                         className="hover:text-gray-700">{periodo.nombre}</Link>
                     <span>/</span>
                     <span className="text-gray-700 font-medium">{nomina.nombre}</span>

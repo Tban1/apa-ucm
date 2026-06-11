@@ -2,26 +2,28 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 
 const ETAPAS = [
-    { value: 'carga_evidencias',       label: 'Carga de Evidencias' },
-    { value: 'validacion_secretario',  label: 'Validación Secretario' },
-    { value: 'evaluacion_cca',         label: 'Evaluación CCA' },
-    { value: 'consejo_facultad',       label: 'Consejo de Facultad' },
-    { value: 'apelaciones',            label: 'Apelaciones' },
-    { value: 'revision_vicerrectoria', label: 'Revisión Vicerrectoría' },
-    { value: 'cierre',                 label: 'Cierre' },
+    { value: 'carga_evidencias',        label: 'Carga de Evidencias' },
+    { value: 'validacion_secretario',   label: 'Validación Secretario' },
+    { value: 'informe_jefatura',        label: 'Informe Jefatura' },
+    { value: 'evaluacion_cca',          label: 'Evaluación CCA' },
+    { value: 'comunicacion_resultados', label: 'Comunicación de Resultados' },
+    { value: 'apelaciones',             label: 'Apelaciones' },
+    { value: 'registro_ccda',           label: 'Registro CCDA' },
+    { value: 'revision_vicerrectoria',  label: 'Revisión Vicerrectoría' },
 ];
 
 const ETAPAS_PARALELAS = new Set([
     'carga_evidencias',
     'validacion_secretario',
+    'informe_jefatura',
 ]);
 
 const INICIO_SECUENCIAL = {
-    evaluacion_cca:         'carga_evidencias',
-    consejo_facultad:       'evaluacion_cca',
-    apelaciones:            'consejo_facultad',
-    revision_vicerrectoria: 'apelaciones',
-    cierre:                 'revision_vicerrectoria',
+    evaluacion_cca:          'validacion_secretario',
+    comunicacion_resultados: 'evaluacion_cca',
+    apelaciones:             'comunicacion_resultados',
+    registro_ccda:           'apelaciones',
+    revision_vicerrectoria:  'registro_ccda',
 };
 
 export default function PeriodoCreate() {
@@ -122,7 +124,7 @@ export default function PeriodoCreate() {
                             Cronograma de etapas
                         </h2>
                         <p className="text-xs text-gray-400 mb-5">
-                            La carga de evidencias y la validación del secretario inician al comienzo del período.
+                            Las etapas paralelas (Carga de Evidencias, Validación Secretario e Informe Jefatura) inician al comienzo del período.
                             Las demás etapas se habilitan secuencialmente al cerrar la etapa anterior.
                             Defina la fecha de cierre de cada etapa.
                         </p>

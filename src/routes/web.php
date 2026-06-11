@@ -46,6 +46,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/periodos/{periodo}/nominas/preview-excel',  [NominaController::class, 'previewExcel'])->name('analista.periodos.nominas.preview-excel');
         Route::post('/periodos/{periodo}/nominas/importar-excel', [NominaController::class, 'importarExcel'])->name('analista.periodos.nominas.importar-excel');
         Route::post('/periodos/{periodo}/nominas/agregar',        [NominaController::class, 'agregarIndividual'])->name('analista.periodos.nominas.agregar');
+        Route::post('/periodos/{periodo}/nominas/columna',        [NominaController::class, 'agregarColumna'])->name('analista.periodos.nominas.columna');
+        Route::delete('/periodos/{periodo}/nominas/columna',      [NominaController::class, 'eliminarColumna'])->name('analista.periodos.nominas.columna.destroy');
+        Route::patch('/periodos/{periodo}/nominas/{nomina}',      [NominaController::class, 'update'])->name('analista.periodos.nominas.update');
         Route::get('/periodos/{periodo}/nominas/exportar',        [NominaController::class, 'exportar'])->name('analista.periodos.nominas.exportar');
         Route::get('/periodos/{periodo}/nominas/{nomina}/detalle',[NominaController::class, 'detalle'])->name('analista.periodos.nominas.detalle');
         Route::get('/nominas/plantilla',                          [NominaController::class, 'plantilla'])->name('analista.nominas.plantilla');
@@ -59,6 +62,15 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/solicitudes',                       [SolicitudController::class, 'indexAnalista'])->name('analista.solicitudes');
         Route::get('/solicitudes/{solicitud}/documento', [SolicitudController::class, 'downloadDocumento'])->name('analista.solicitudes.documento');
+
+        Route::get('/registro-ccda',                     [AnalistaCCDAController::class, 'registroCcda'])->name('analista.registro-ccda');
+        Route::post('/registro-ccda/{facultad}',         [AnalistaCCDAController::class, 'storeVerificacion'])->name('analista.registro-ccda.store');
+
+        Route::get('/apelaciones',                                                  [AnalistaCCDAController::class, 'apelaciones'])->name('analista.apelaciones');
+        Route::get('/apelaciones/{nomina}',                                         [AnalistaCCDAController::class, 'showApelacion'])->name('analista.apelaciones.show');
+        Route::post('/apelaciones/{nomina}/evaluar',                                [AnalistaCCDAController::class, 'storeApelacion'])->name('analista.apelaciones.evaluar');
+        Route::post('/apelaciones/{nomina}/finalizar',                              [AnalistaCCDAController::class, 'finalizeApelacion'])->name('analista.apelaciones.finalizar');
+        Route::get('/apelaciones/{nomina}/evidencias/{evidencia}/descargar',        [AnalistaCCDAController::class, 'downloadEvidenciaApelacion'])->name('analista.apelaciones.evidencia.download');
     });
 
     Route::middleware('role:secretario')->prefix('secretario')->group(function () {
@@ -120,6 +132,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/apelacion',                                  [ApelacionController::class, 'store'])->name('academico.apelacion.store');
         Route::post('/evidencias-apelacion',                       [EvidenciaController::class, 'storeApelacion'])->name('academico.evidencias.apelacion.store');
         Route::delete('/evidencias-apelacion/{evidencia}',         [EvidenciaController::class, 'destroyApelacion'])->name('academico.evidencias.apelacion.destroy');
+    });
+
+    Route::middleware('role:rrhh')->prefix('rrhh')->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'rrhh'])->name('rrhh.dashboard');
     });
 
     Route::middleware('role:academico')->get('/academico/bloqueado', fn () => inertia('Academico/BloqueadoLicencia'))

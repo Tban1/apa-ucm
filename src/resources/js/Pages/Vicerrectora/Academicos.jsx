@@ -1,11 +1,23 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
+
+const CONCEPTOS = [
+    { value: 'excelente',  label: 'Excelente' },
+    { value: 'muy_bueno',  label: 'Muy Bueno' },
+    { value: 'bueno',      label: 'Bueno' },
+    { value: 'regular',    label: 'Regular' },
+    { value: 'deficiente', label: 'Deficiente' },
+];
 
 export default function Academicos({ periodo, academicos }) {
     const { flash } = usePage().props;
     const [comentandoId, setComentandoId] = useState(null);
     const form = useForm({ comentario: '' });
+
+    const [busqueda, setBusqueda]         = useState('');
+    const [filtroFacultad, setFiltroFacultad] = useState('');
+    const [filtroConcepto, setFiltroConcepto] = useState('');
 
     function enviarComentario(evaluacionId) {
         form.post(`/vicerrectora/evaluaciones/${evaluacionId}/comentario`, {
@@ -13,6 +25,21 @@ export default function Academicos({ periodo, academicos }) {
             onSuccess: () => { setComentandoId(null); form.reset(); },
         });
     }
+
+    const facultades = useMemo(
+        () => [...new Set(academicos.map(a => a.facultad).filter(Boolean))].sort(),
+        [academicos]
+    );
+
+    const filtrados = useMemo(() => {
+        const q = busqueda.trim().toLowerCase();
+        return academicos.filter(a => {
+            if (q && !a.name.toLowerCase().includes(q) && !a.rut.toLowerCase().includes(q)) return false;
+            if (filtroFacultad && a.facultad !== filtroFacultad) return false;
+            if (filtroConcepto && a.calificacion !== filtroConcepto) return false;
+            return true;
+        });
+    }, [academicos, busqueda, filtroFacultad, filtroConcepto]);
 
     return (
         <>
@@ -28,10 +55,42 @@ export default function Academicos({ periodo, academicos }) {
                 {!periodo ? (
                     <p className="text-gray-400 text-sm">No hay período activo.</p>
                 ) : (
-                    <div className="space-y-3">
-                        {academicos.length === 0 ? (
-                            <p className="text-gray-400 text-sm">No hay académicos evaluados aún.</p>
-                        ) : academicos.map(a => (
+                    <div className="space-y-4">
+                        {/* Filtros */}
+                        <div className="flex flex-wrap gap-3">
+                            <input
+                                type="text"
+                                value={busqueda}
+                                onChange={e => setBusqueda(e.target.value)}
+                                placeholder="Buscar por nombre o RUT..."
+                                className="flex-1 min-w-48 text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1B2D6B]/30"
+                            />
+                            <select
+                                value={filtroFacultad}
+                                onChange={e => setFiltroFacultad(e.target.value)}
+                                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1B2D6B]/30"
+                            >
+                                <option value="">Todas las facultades</option>
+                                {facultades.map(f => (
+                                    <option key={f} value={f}>{f}</option>
+                                ))}
+                            </select>
+                            <select
+                                value={filtroConcepto}
+                                onChange={e => setFiltroConcepto(e.target.value)}
+                                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1B2D6B]/30"
+                            >
+                                <option value="">Todos los conceptos</option>
+                                {CONCEPTOS.map(c => (
+                                    <option key={c.value} value={c.value}>{c.label}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Resultados */}
+                        {filtrados.length === 0 ? (
+                            <p className="text-gray-400 text-sm">No hay académicos para mostrar.</p>
+                        ) : filtrados.map(a => (
                             <div key={a.nomina_id} className="bg-white rounded-xl border border-gray-200 p-4">
                                 <div className="flex flex-wrap items-start justify-between gap-3">
                                     <div>

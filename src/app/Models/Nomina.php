@@ -154,7 +154,10 @@ class Nomina extends Model
 
     public function tieneCompromisoApaConfirmado(): bool
     {
-        return $this->compromisoApa && $this->compromisoApa->estaConfirmado();
+        $categoria = $this->categoriaEfectiva();
+        $requeridos = CompromisoApa::semestresParaCategoria($categoria);
+        $confirmados = $this->compromisos()->whereNotNull('confirmado_en')->count();
+        return $confirmados >= $requeridos;
     }
 
     // ── Relaciones ───────────────────────────────────────────────────────
@@ -204,9 +207,16 @@ class Nomina extends Model
         return $this->hasMany(HistorialCategoria::class)->orderByDesc('anio');
     }
 
+    /** Todos los compromisos APA (uno por semestre) */
+    public function compromisos(): HasMany
+    {
+        return $this->hasMany(CompromisoApa::class)->orderBy('semestre');
+    }
+
+    /** Primer compromiso confirmado (para compatibilidad con CalificacionCadService) */
     public function compromisoApa(): HasOne
     {
-        return $this->hasOne(CompromisoApa::class);
+        return $this->hasOne(CompromisoApa::class)->whereNotNull('confirmado_en')->orderBy('semestre');
     }
 
     public function calificacionFinal(): HasOne
@@ -226,6 +236,11 @@ class Nomina extends Model
     public function calificacionJefatura(): HasOne
     {
         return $this->hasOne(CalificacionJefatura::class);
+    }
+
+    public function apelaciones(): HasMany
+    {
+        return $this->hasMany(Apelacion::class);
     }
 
     public function apelacion(): HasOne

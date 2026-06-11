@@ -9,8 +9,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('compromisos_apa')) {
-            Schema::create('compromisos_apa', function (Blueprint $table) {
+        Schema::dropIfExists('compromisos_apa');
+
+        Schema::create('compromisos_apa', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('nomina_id')->constrained('nominas')->cascadeOnDelete();
             $table->foreignUuid('periodo_id')->constrained('periodos')->cascadeOnDelete();
@@ -32,7 +33,6 @@ return new class extends Migration
                 pct_docencia + pct_investigacion + pct_extension +
                 pct_administracion + pct_otras = 100
             )');
-        }
     }
 
     public function down(): void

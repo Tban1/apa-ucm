@@ -9,7 +9,7 @@ return new class extends Migration
     {
         DB::statement('ALTER TABLE cronogramas DROP CONSTRAINT IF EXISTS cronogramas_etapa_check');
         DB::statement("ALTER TABLE cronogramas ADD CONSTRAINT cronogramas_etapa_check CHECK (etapa IN (
-            'carga_evidencias','evaluacion_secretario','evaluacion_cca',
+            'carga_evidencias','validacion_secretario','evaluacion_cca',
             'consejo_facultad','apelaciones','revision_vicerrectoria','cierre'
         ))");
     }

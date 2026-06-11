@@ -29,10 +29,10 @@ export default function Expedientes({ periodo, expedientes, evaluacionHabilitada
                 {!evaluacionHabilitada && (
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
                         <p className="text-amber-800 font-semibold text-sm mb-1">
-                            Período de entrega de evidencias aún vigente
+                            Validación del secretario aún vigente
                         </p>
                         <p className="text-amber-700 text-sm">
-                            La evaluación se habilitará cuando cierre la etapa de carga de evidencias
+                            La evaluación se habilitará cuando cierre la etapa de validación del secretario
                             {fechaAperturaEval && (
                                 <span className="font-semibold"> ({fechaAperturaEval})</span>
                             )}.

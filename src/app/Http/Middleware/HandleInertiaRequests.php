@@ -21,8 +21,10 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user()?->load('facultad'),
             ],
             'flash' => [
-                'success' => fn () => $request->session()->get('success'),
-                'error'   => fn () => $request->session()->get('error'),
+                'success'       => fn () => $request->session()->get('success'),
+                'error'         => fn () => $request->session()->get('error'),
+                'excel_preview' => fn () => $request->session()->get('excel_preview'),
+                'import_errores'=> fn () => $request->session()->get('import_errores'),
             ],
             'notificaciones_no_leidas' => fn () => $request->user()
                 ? $request->user()->notificaciones()->noLeidas()->count()

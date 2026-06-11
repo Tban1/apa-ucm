@@ -212,7 +212,7 @@ class SolicitudController extends Controller
     {
         return $request->validate([
             'nomina_id'    => ['required', 'uuid', 'exists:nominas,id'],
-            'tipo'         => ['required', 'in:licencia_medica,extension_plazo'],
+            'tipo'         => ['required', 'in:licencia_medica,extension_plazo,perfeccionamiento,cargo_administrativo,otro'],
             'fecha_inicio' => ['required', 'date'],
             'fecha_fin'    => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
             'motivo'       => ['required', 'string', 'min:10', 'max:2000'],
@@ -283,9 +283,12 @@ class SolicitudController extends Controller
     private function labelTipo(string $tipo): string
     {
         return match ($tipo) {
-            'licencia_medica' => 'licencia médica',
-            'extension_plazo' => 'extensión de plazo',
-            default           => $tipo,
+            'licencia_medica'      => 'licencia médica',
+            'extension_plazo'      => 'extensión de plazo',
+            'perfeccionamiento'    => 'perfeccionamiento',
+            'cargo_administrativo' => 'cargo administrativo',
+            'otro'                 => 'otro',
+            default                => $tipo,
         };
     }
 

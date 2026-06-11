@@ -175,6 +175,9 @@ export default function Solicitudes({ periodo, solicitudes, nominas }) {
                                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
                                         <option value="licencia_medica">Licencia médica</option>
                                         <option value="extension_plazo">Extensión de plazo</option>
+                                        <option value="perfeccionamiento">Perfeccionamiento</option>
+                                        <option value="cargo_administrativo">Cargo administrativo</option>
+                                        <option value="otro">Otro</option>
                                     </select>
                                 </div>
 

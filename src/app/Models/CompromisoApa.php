@@ -13,11 +13,27 @@ class CompromisoApa extends Model
     protected $table = 'compromisos_apa';
 
     protected $fillable = [
-        'nomina_id', 'periodo_id',
+        'nomina_id', 'periodo_id', 'semestre',
         'pct_docencia', 'pct_investigacion', 'pct_extension',
         'pct_administracion', 'pct_otras',
         'fuente', 'confirmado_en', 'modificado_por', 'modificado_en',
     ];
+
+    public static function semestresParaCategoria(?string $categoria): int
+    {
+        return $categoria === 'auxiliar' ? 2 : 4;
+    }
+
+    public static function labelSemestre(string|int $semestre): string
+    {
+        return match ((string) $semestre) {
+            '1' => 'I Semestre',
+            '2' => 'II Semestre',
+            '3' => 'III Semestre',
+            '4' => 'IV Semestre',
+            default => "Semestre {$semestre}",
+        };
+    }
 
     protected function casts(): array
     {

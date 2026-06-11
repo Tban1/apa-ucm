@@ -40,16 +40,18 @@ const SLUG_A_REGLAMENTO = {
     formacion_continua: 'formacion',
 };
 
-function calcularNotaFinal(notas, categorias, pesosReglamento) {
+function calcularNotaFinal(notas, categorias, pesosReglamento, extra = 0) {
     let suma = 0;
-    categorias.forEach(cat => {
-        const campo = SLUGS_A_CAMPO[cat.slug];
-        const regKey = SLUG_A_REGLAMENTO[cat.slug] ?? cat.slug;
-        const nota = Number(notas[campo] ?? 1);
-        const peso = Number(pesosReglamento[regKey] ?? cat.peso ?? 0);
-        suma += (peso * nota) / 100;
-    });
-    return Math.min(Math.round(suma * 100) / 100, 5.0);
+    categorias
+        .filter(cat => cat.slug !== 'formacion_continua')
+        .forEach(cat => {
+            const campo = SLUGS_A_CAMPO[cat.slug];
+            const regKey = SLUG_A_REGLAMENTO[cat.slug] ?? cat.slug;
+            const nota = Number(notas[campo] ?? 1);
+            const peso = Number(pesosReglamento[regKey] ?? cat.peso ?? 0);
+            suma += (peso * nota) / 100;
+        });
+    return Math.min(Math.round((suma + Number(extra)) * 100) / 100, 5.0);
 }
 
 function conceptoDesdeNota(nota) {
@@ -63,20 +65,21 @@ function conceptoDesdeNota(nota) {
 export default function EvaluarExpediente({
     nomina, categorias, pesosReglamento, evidenciasPorCategoria,
     miEvaluacion, todasEvaluaciones, calificacionFinal, esApelacion, sinCompromisoApa,
+    compromisosSemestres,
 }) {
     const { flash } = usePage().props;
     const badge = ESTADOS[nomina.estado] ?? { label: nomina.estado, cls: 'bg-gray-100 text-gray-600' };
     const bloqueado = nomina.estado === 'evaluado';
 
     const evalForm = useForm({
-        sin_calificacion:      miEvaluacion?.sin_calificacion      ?? false,
-        motivo_sc:             miEvaluacion?.motivo_sc             ?? '',
-        puntaje_docencia:      miEvaluacion?.puntaje_docencia      ?? 3.0,
-        puntaje_investigacion: miEvaluacion?.puntaje_investigacion ?? 3.0,
-        puntaje_vinculacion:   miEvaluacion?.puntaje_vinculacion   ?? 3.0,
-        puntaje_gestion:       miEvaluacion?.puntaje_gestion       ?? 3.0,
-        puntaje_formacion:     miEvaluacion?.puntaje_formacion     ?? 3.0,
-        comentario:            miEvaluacion?.comentario            ?? '',
+        sin_calificacion:         miEvaluacion?.sin_calificacion         ?? false,
+        motivo_sc:                miEvaluacion?.motivo_sc                ?? '',
+        puntaje_docencia:         miEvaluacion?.puntaje_docencia         ?? 3.0,
+        puntaje_investigacion:    miEvaluacion?.puntaje_investigacion    ?? 3.0,
+        puntaje_vinculacion:      miEvaluacion?.puntaje_vinculacion      ?? 3.0,
+        puntaje_gestion:          miEvaluacion?.puntaje_gestion          ?? 3.0,
+        extra_otras_actividades:  miEvaluacion?.extra_otras_actividades  ?? 0,
+        comentario:               miEvaluacion?.comentario               ?? '',
     });
 
     const finalForm = useForm({ observacion: '' });
@@ -84,7 +87,7 @@ export default function EvaluarExpediente({
     const notaCalculada = useMemo(
         () => evalForm.data.sin_calificacion
             ? 0
-            : calcularNotaFinal(evalForm.data, categorias, pesosReglamento),
+            : calcularNotaFinal(evalForm.data, categorias, pesosReglamento, evalForm.data.extra_otras_actividades),
         [evalForm.data, categorias, pesosReglamento]
     );
 
@@ -116,7 +119,41 @@ export default function EvaluarExpediente({
 
                 {sinCompromisoApa && (
                     <div className="mb-5 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-                        Este académico no ha declarado su distribución APA.
+                        Este académico no ha declarado su distribución APA. Se usan los pesos por defecto del reglamento.
+                    </div>
+                )}
+
+                {compromisosSemestres?.length > 0 && (
+                    <div className="mb-5 bg-white rounded-xl border border-gray-200 p-4">
+                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">
+                            Distribución APA declarada por semestre
+                        </p>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                                <thead>
+                                    <tr className="bg-gray-50">
+                                        <th className="text-left px-3 py-2 font-medium text-gray-600">Semestre</th>
+                                        <th className="text-center px-2 py-2 font-medium text-gray-600">Docencia</th>
+                                        <th className="text-center px-2 py-2 font-medium text-gray-600">Investigación</th>
+                                        <th className="text-center px-2 py-2 font-medium text-gray-600">Extensión</th>
+                                        <th className="text-center px-2 py-2 font-medium text-gray-600">Gestión</th>
+                                        <th className="text-center px-2 py-2 font-medium text-gray-600">Otras</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {compromisosSemestres.map(c => (
+                                        <tr key={c.semestre} className="hover:bg-gray-50/60">
+                                            <td className="px-3 py-2 font-medium text-gray-700">{c.label}</td>
+                                            <td className="px-2 py-2 text-center text-gray-600">{c.pct_docencia}%</td>
+                                            <td className="px-2 py-2 text-center text-gray-600">{c.pct_investigacion}%</td>
+                                            <td className="px-2 py-2 text-center text-gray-600">{c.pct_extension}%</td>
+                                            <td className="px-2 py-2 text-center text-gray-600">{c.pct_administracion}%</td>
+                                            <td className="px-2 py-2 text-center text-gray-600">{c.pct_otras}%</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
                 {flash?.success && (
@@ -274,28 +311,55 @@ export default function EvaluarExpediente({
                                         </div>
                                     )}
 
-                                    {!evalForm.data.sin_calificacion && categorias.map(cat => {
-                                        const campo = SLUGS_A_CAMPO[cat.slug];
-                                        const val   = evalForm.data[campo] ?? 3;
-                                        return (
-                                            <div key={cat.id}>
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <label className="text-xs font-medium text-gray-700">
-                                                        {AREA_LABELS[cat.slug] ?? cat.nombre}
-                                                    </label>
-                                                    <span className="text-xs font-bold text-[#1B2D6B]">{Number(val).toFixed(1)}</span>
+                                    {!evalForm.data.sin_calificacion && categorias
+                                        .filter(cat => cat.slug !== 'formacion_continua')
+                                        .map(cat => {
+                                            const campo = SLUGS_A_CAMPO[cat.slug];
+                                            const val   = evalForm.data[campo] ?? 3;
+                                            return (
+                                                <div key={cat.id}>
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <label className="text-xs font-medium text-gray-700">
+                                                            {AREA_LABELS[cat.slug] ?? cat.nombre}
+                                                        </label>
+                                                    </div>
+                                                    <input
+                                                        type="number"
+                                                        min="1.0" max="5.0" step="0.1"
+                                                        value={val}
+                                                        disabled={bloqueado}
+                                                        onChange={e => {
+                                                            const v = parseFloat(e.target.value);
+                                                            if (!isNaN(v)) evalForm.setData(campo, Math.min(5, Math.max(1, v)));
+                                                        }}
+                                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[#1B2D6B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#1B2D6B]/30 disabled:bg-gray-50"
+                                                    />
                                                 </div>
-                                                <input
-                                                    type="range"
-                                                    min={1} max={5} step={0.1}
-                                                    value={val}
-                                                    disabled={bloqueado}
-                                                    onChange={e => evalForm.setData(campo, parseFloat(e.target.value))}
-                                                    className="w-full accent-[#1B2D6B] disabled:opacity-50"
-                                                />
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })
+                                    }
+
+                                    {!evalForm.data.sin_calificacion && (
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                                                Otras actividades (bonus externo al 100%)
+                                            </label>
+                                            <select
+                                                value={evalForm.data.extra_otras_actividades}
+                                                disabled={bloqueado}
+                                                onChange={e => evalForm.setData('extra_otras_actividades', parseFloat(e.target.value))}
+                                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[#1B2D6B] font-semibold focus:outline-none focus:ring-2 focus:ring-[#1B2D6B]/30 disabled:bg-gray-50"
+                                            >
+                                                <option value={0}>Sin bonus (0)</option>
+                                                <option value={0.1}>+0.1</option>
+                                                <option value={0.2}>+0.2</option>
+                                                <option value={0.3}>+0.3</option>
+                                            </select>
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                Se suma a la nota ponderada. Nota final = mín(ponderado + bonus, 5.0)
+                                            </p>
+                                        </div>
+                                    )}
 
                                     <div className="rounded-lg bg-[#1B2D6B]/5 border border-[#1B2D6B]/20 p-4">
                                         <div className="flex items-center justify-between">
@@ -311,11 +375,17 @@ export default function EvaluarExpediente({
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-medium text-gray-600 mb-1">
-                                            Retroalimentación
-                                        </label>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <label className="text-xs font-medium text-gray-600">
+                                                Retroalimentación
+                                            </label>
+                                            <span className={`text-xs ${evalForm.data.comentario.length > 550 ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
+                                                {evalForm.data.comentario.length}/600
+                                            </span>
+                                        </div>
                                         <textarea
                                             rows={4}
+                                            maxLength={600}
                                             value={evalForm.data.comentario}
                                             disabled={bloqueado}
                                             onChange={e => evalForm.setData('comentario', e.target.value)}
@@ -355,10 +425,18 @@ export default function EvaluarExpediente({
                                     Promedio de {todasEvaluaciones.length} evaluación(es) con fórmula CAD.
                                 </p>
                                 <form onSubmit={submitFinal} className="space-y-3">
-                                    <textarea rows={2} value={finalForm.data.observacion}
-                                        onChange={e => finalForm.setData('observacion', e.target.value)}
-                                        placeholder="Observación general del CCA..."
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none" />
+                                    <div>
+                                        <div className="flex justify-end mb-1">
+                                            <span className={`text-xs ${finalForm.data.observacion.length > 550 ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
+                                                {finalForm.data.observacion.length}/600
+                                            </span>
+                                        </div>
+                                        <textarea rows={2} value={finalForm.data.observacion}
+                                            maxLength={600}
+                                            onChange={e => finalForm.setData('observacion', e.target.value)}
+                                            placeholder="Observación general del CCA..."
+                                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none" />
+                                    </div>
                                     <button type="submit" disabled={finalForm.processing}
                                         className="px-5 py-2.5 bg-green-700 text-white text-sm font-medium rounded-lg hover:bg-green-800 disabled:opacity-40">
                                         {finalForm.processing ? 'Registrando...' : 'Registrar calificación final'}

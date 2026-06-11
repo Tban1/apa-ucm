@@ -52,12 +52,13 @@ class CalificacionCadService
     }
 
     /**
-     * nota_final = min(Σ(%T_i × N_i) / 100, 5.0)
+     * nota_final = min(Σ(%T_i × N_i) / 100 + extra, 5.0)
      *
      * @param  array<string, float|int|string>  $notas  slug => nota 1.0–5.0
      * @param  array<string, int|float>  $pesos  slug => %T
+     * @param  float  $extra  bonus por otras actividades (0, 0.1, 0.2, 0.3)
      */
-    public static function calcularNotaFinal(array $notas, array $pesos): float
+    public static function calcularNotaFinal(array $notas, array $pesos, float $extra = 0.0): float
     {
         $suma = 0.0;
 
@@ -67,7 +68,7 @@ class CalificacionCadService
             $suma += ($peso * $nota) / 100;
         }
 
-        return round(min($suma, 5.0), 2);
+        return round(min($suma + $extra, 5.0), 2);
     }
 
     public static function calcularDesdeEvaluacion(object $evaluacion, ?string $categoriaAcademica, ?\App\Models\CompromisoApa $compromiso = null): float
@@ -81,9 +82,12 @@ class CalificacionCadService
             $notas[$slug] = (float) $evaluacion->{$campo};
         }
 
+        $extra = (float) ($evaluacion->extra_otras_actividades ?? 0.0);
+
         return self::calcularNotaFinal(
             $notas,
-            self::pesosDesdeCompromiso($compromiso, $categoriaAcademica)
+            self::pesosDesdeCompromiso($compromiso, $categoriaAcademica),
+            $extra
         );
     }
 

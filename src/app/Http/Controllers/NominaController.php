@@ -14,6 +14,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -137,19 +138,44 @@ class NominaController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'rut', 'facultad_id']);
 
-        $nominasEnPeriodo = Nomina::where('periodo_id', $periodo->id)
-            ->get([
-                'id', 'user_id', 'estado', 'con_licencia', 'observacion_licencia', 'updated_at',
-                'numero_personal', 'rut', 'nombre', 'unidad_superior', 'unidad',
-                'nombre_posicion', 'tipo_trabajador', 'fecha_inicio_contrato',
-                'horas_contrato', 'categoria', 'fecha_categorizacion',
+        $nominasEnPeriodo = Nomina::with('academico')
+            ->where('periodo_id', $periodo->id)
+            ->get()
+            ->map(fn (Nomina $n) => [
+                'id'                   => $n->id,
+                'user_id'              => $n->user_id,
+                'estado'               => $n->estado,
+                'con_licencia'         => $n->con_licencia,
+                'observacion_licencia' => $n->observacion_licencia,
+                'updated_at'           => $n->updated_at,
+                // SAPD → fallback a datos del usuario
+                'numero_personal'      => $n->numero_personal,
+                'rut'                  => $n->rut      ?? $n->academico?->rut,
+                'nombre'               => $n->nombre   ?? $n->academico?->name,
+                'adscripcion_academica'=> $n->adscripcion_academica,
+                'unidad_superior'      => $n->unidad_superior,
+                'unidad'               => $n->unidad,
+                'nombre_posicion'      => $n->nombre_posicion,
+                'tipo_trabajador'      => $n->tipo_trabajador,
+                'fecha_inicio_contrato'=> $n->fecha_inicio_contrato?->format('Y-m-d'),
+                'horas_contrato'       => $n->horas_contrato ?? $n->academico?->horas_contrato_isem,
+                'categoria'            => $n->categoria   ?? $n->academico?->categoria_academica,
+                'fecha_categorizacion' => $n->fecha_categorizacion?->format('Y-m-d'),
+                'datos_adicionales'    => $n->datos_adicionales ?? [],
             ]);
 
+        $columnasAdicionales = $nominasEnPeriodo
+            ->flatMap(fn ($n) => array_keys($n['datos_adicionales'] ?? []))
+            ->unique()
+            ->values()
+            ->all();
+
         return Inertia::render('Nomina/Create', [
-            'periodo'          => $periodo->only(['id', 'anio', 'nombre', 'estado']),
-            'facultades'       => $facultades,
-            'academicos'       => $academicos,
-            'nominasEnPeriodo' => $nominasEnPeriodo,
+            'periodo'              => $periodo->only(['id', 'anio', 'nombre', 'estado']),
+            'facultades'           => $facultades,
+            'academicos'           => $academicos,
+            'nominasEnPeriodo'     => $nominasEnPeriodo,
+            'columnas_adicionales' => $columnasAdicionales,
         ]);
     }
 
@@ -204,8 +230,8 @@ class NominaController extends Controller
             'archivo.max'   => 'El archivo no puede superar los 5 MB.',
         ]);
 
-        $path     = $request->file('archivo')->store('tmp_nominas');
-        $fullPath = storage_path('app/' . $path);
+        $path     = $request->file('archivo')->store('tmp_nominas', 'local');
+        $fullPath = Storage::disk('local')->path($path);
 
         try {
             $spreadsheet = IOFactory::load($fullPath);
@@ -225,7 +251,7 @@ class NominaController extends Controller
                 }
             }
         } catch (\Throwable $e) {
-            unlink($fullPath);
+            @unlink($fullPath);
             return back()->withErrors(['archivo' => 'No se pudo leer el archivo: ' . $e->getMessage()]);
         }
 
@@ -262,7 +288,7 @@ class NominaController extends Controller
             'datos_adicionales.*' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $fullPath = storage_path('app/' . $data['path']);
+        $fullPath = Storage::disk('local')->path($data['path']);
 
         if (!file_exists($fullPath)) {
             return back()->withErrors(['path' => 'El archivo ya no existe. Vuelve a subirlo.']);
@@ -510,6 +536,88 @@ class NominaController extends Controller
             ->with('success', "{$user->name} agregado a la nómina.");
     }
 
+    // ── Editar campos de una nómina ───────────────────────────────────────────
+
+    public function update(Request $request, Periodo $periodo, Nomina $nomina)
+    {
+        foreach (['fecha_inicio_contrato', 'fecha_categorizacion'] as $campo) {
+            if ($request->input($campo) === '') {
+                $request->merge([$campo => null]);
+            }
+        }
+        if ($request->input('horas_contrato') === '') {
+            $request->merge(['horas_contrato' => null]);
+        }
+
+        $data = $request->validate([
+            'rut'                   => ['nullable', 'string', 'max:20'],
+            'nombre'                => ['nullable', 'string', 'max:200'],
+            'numero_personal'       => ['nullable', 'string', 'max:50'],
+            'adscripcion_academica' => ['nullable', 'string', 'max:150'],
+            'unidad_superior'       => ['nullable', 'string', 'max:150'],
+            'unidad'                => ['nullable', 'string', 'max:150'],
+            'nombre_posicion'       => ['nullable', 'string', 'max:150'],
+            'tipo_trabajador'       => ['nullable', 'string', 'max:50'],
+            'fecha_inicio_contrato' => ['nullable', 'date'],
+            'horas_contrato'        => ['nullable', 'integer', 'min:0'],
+            'categoria'             => ['nullable', 'in:auxiliar,adjunto,titular,jerarquizado'],
+            'fecha_categorizacion'  => ['nullable', 'date'],
+            'datos_adicionales'     => ['nullable', 'array'],
+        ]);
+
+        $nomina->update($data);
+
+        return redirect()
+            ->route('analista.periodos.nominas.create', $periodo->id)
+            ->with('success', 'Académico actualizado correctamente.');
+    }
+
+    // ── Agregar columna personalizada a toda la nómina ────────────────────────
+
+    public function agregarColumna(Request $request, Periodo $periodo)
+    {
+        $data = $request->validate([
+            'nombre_columna' => ['required', 'string', 'max:60'],
+        ]);
+
+        $clave = trim($data['nombre_columna']);
+
+        Nomina::where('periodo_id', $periodo->id)->each(function (Nomina $n) use ($clave) {
+            $extras = $n->datos_adicionales ?? [];
+            if (!array_key_exists($clave, $extras)) {
+                $extras[$clave] = null;
+                $n->update(['datos_adicionales' => $extras]);
+            }
+        });
+
+        return redirect()
+            ->route('analista.periodos.nominas.create', $periodo->id)
+            ->with('success', "Columna \"{$clave}\" agregada a la nómina.");
+    }
+
+    // ── Eliminar columna personalizada de toda la nómina ─────────────────────
+
+    public function eliminarColumna(Request $request, Periodo $periodo)
+    {
+        $data = $request->validate([
+            'nombre_columna' => ['required', 'string', 'max:60'],
+        ]);
+
+        $clave = trim($data['nombre_columna']);
+
+        Nomina::where('periodo_id', $periodo->id)->each(function (Nomina $n) use ($clave) {
+            $extras = $n->datos_adicionales ?? [];
+            if (array_key_exists($clave, $extras)) {
+                unset($extras[$clave]);
+                $n->update(['datos_adicionales' => $extras ?: null]);
+            }
+        });
+
+        return redirect()
+            ->route('analista.periodos.nominas.create', $periodo->id)
+            ->with('success', "Columna \"{$clave}\" eliminada de la nómina.");
+    }
+
     // ── Detalle de un académico en la nómina ──────────────────────────────────
 
     public function detalle(Periodo $periodo, Nomina $nomina): Response
@@ -557,16 +665,19 @@ class NominaController extends Controller
 
     public function exportar(Request $request, Periodo $periodo)
     {
-        $facultadId = $request->query('facultad_id');
+        $facultadId     = $request->query('facultad_id');
+        $soloExcelentes = (bool) $request->query('solo_excelentes', false);
 
         $codigoFacultad = $facultadId
             ? (Facultad::find($facultadId)?->codigo ?? 'TODAS')
             : 'TODAS';
 
-        $filename = 'nomina_' . $codigoFacultad . '_' . $periodo->anio . '.xlsx';
+        $filename = $soloExcelentes
+            ? 'excelentes_' . $periodo->anio . '.xlsx'
+            : 'nomina_' . $codigoFacultad . '_' . $periodo->anio . '.xlsx';
 
         return Excel::download(
-            new NominaExport($periodo, $facultadId ?: null),
+            new NominaExport($periodo, $facultadId ?: null, false, $soloExcelentes),
             $filename
         );
     }

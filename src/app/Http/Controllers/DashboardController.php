@@ -174,4 +174,13 @@ class DashboardController extends Controller
             'periodo' => $periodo?->only(['nombre', 'anio']),
         ]);
     }
+
+    public function rrhh(): Response
+    {
+        $periodo = Periodo::where('estado', 'activo')->latest()->first();
+
+        return Inertia::render('Dashboard/Rrhh', [
+            'periodo' => $periodo?->only(['nombre', 'anio']),
+        ]);
+    }
 }

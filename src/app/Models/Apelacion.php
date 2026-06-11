@@ -13,7 +13,7 @@ class Apelacion extends Model
     protected $table = 'apelaciones';
 
     protected $fillable = [
-        'nomina_id', 'motivo', 'estado',
+        'nomina_id', 'motivo', 'estado', 'destino',
         'fecha_solicitud', 'fecha_resolucion', 'resolucion',
     ];
 

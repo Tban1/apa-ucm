@@ -44,6 +44,7 @@ class VicerrectoraController extends Controller
                             $n->categoria ?? $n->academico->categoria_academica
                         ),
                         'nota_final'      => $cf ? (float) ($cf->nota_final ?? 0) : null,
+                        'calificacion'    => $cf?->calificacion,
                         'concepto'        => $cf
                             ? CalificacionCadService::labelConcepto($cf->calificacion)
                             : null,

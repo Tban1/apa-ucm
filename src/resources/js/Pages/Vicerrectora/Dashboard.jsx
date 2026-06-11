@@ -32,7 +32,7 @@ function ModalComentario({ academico, onClose }) {
 
     function submit(e) {
         e.preventDefault();
-        post(route('vicerrectora.comentar', academico.id), {
+        post('/vicerrectora/evaluaciones/' + academico.id + '/comentario', {
             onSuccess: onClose,
         });
     }
@@ -138,7 +138,7 @@ export default function VicerrectoraDashboard({ periodo, academicos }) {
                                                 {a.comentario ?? <span className="italic text-gray-300">Sin comentario</span>}
                                             </td>
                                             <td className="px-4 py-3 flex gap-2 justify-end">
-                                                <Link href={route('vicerrectora.expedientes.show', a.id)}
+                                                <Link href={'/vicerrectora/expedientes/' + a.id}
                                                     className="text-xs text-[#1B2D6B] hover:underline">
                                                     Ver expediente
                                                 </Link>
