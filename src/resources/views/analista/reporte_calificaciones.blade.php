@@ -178,17 +178,52 @@
 
         .btn-filter { background: #0096D6; }
 
+        [contenteditable]:empty:before {
+            content: attr(placeholder);
+            color: #9ca3af;
+            font-style: italic;
+        }
+
         @media print {
             .no-print { display: none; }
             body { padding: 10px 14px; }
             .table-reporte { font-size: 7.5px; }
+            [contenteditable] {
+                border: none !important;
+                outline: none !important;
+            }
         }
     </style>
 </head>
 <body>
 
-<div class="no-print" style="margin-bottom: 16px;">
+<div class="no-print" style="margin-bottom: 16px; display: flex; gap: 12px; align-items: center;">
     <button class="btn-print" onclick="window.print()">Imprimir / Guardar como PDF</button>
+    <button class="btn-filter" onclick="toggleColumnasPersonalizadas()">+ Agregar columna manual</button>
+    <div id="columnasActivas" style="font-size: 10px; color: #555;"></div>
+</div>
+
+<div id="panelColumnas" class="no-print" style="display: none; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="font-size: 13px; font-weight: bold; color: #1B2D6B; margin: 0;">Columnas Personalizadas</h3>
+        <button onclick="toggleColumnasPersonalizadas()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #6b7280;">&times;</button>
+    </div>
+    <p style="font-size: 11px; color: #6b7280; margin-bottom: 12px;">
+        Agrega columnas editables manualmente al reporte. Completa los datos antes de imprimir.
+    </p>
+    <form onsubmit="agregarColumna(event)" style="display: flex; gap: 8px; margin-bottom: 12px;">
+        <input 
+            type="text" 
+            id="nombreColumna" 
+            placeholder="Nombre de la columna (ej: Observaciones)" 
+            maxlength="30"
+            style="flex: 1; padding: 8px; font-size: 11px; border: 1px solid #d1d5db; border-radius: 5px;"
+        />
+        <button type="submit" style="padding: 8px 16px; font-size: 11px; background: #1B2D6B; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            Agregar
+        </button>
+    </form>
+    <div id="listaColumnas" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
 </div>
 
 <div class="header">
@@ -256,7 +291,7 @@
             <div class="resumen-item"><div class="val">{{ $f['resumen']['deficiente'] }}</div><div class="lbl">Deficiente</div></div>
         </div>
 
-        <table class="table-reporte">
+        <table class="table-reporte" id="tablaReporte">
             <thead>
                 <tr>
                     <th rowspan="2">#</th>
@@ -267,6 +302,7 @@
                     <th colspan="5">Nota por área APA</th>
                     <th colspan="2">Calificación final</th>
                     <th rowspan="2">Estado</th>
+                    <th rowspan="2" class="columnas-extra-header" style="display: none;"></th>
                 </tr>
                 <tr>
                     <th>Nota</th>
@@ -319,6 +355,7 @@
                             {{ $a['estado_reporte'] }}
                         @endif
                     </td>
+                    <td class="columnas-extra-cell" style="display: none;"></td>
                 </tr>
                 @endforeach
             </tbody>
@@ -329,6 +366,87 @@
 @if ($facultades->isEmpty())
     <p style="color:#999;text-align:center;padding:30px 0;">No hay datos de calificaciones para este período.</p>
 @endif
+
+<script>
+let columnasPersonalizadas = [];
+
+function toggleColumnasPersonalizadas() {
+    const panel = document.getElementById('panelColumnas');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function agregarColumna(e) {
+    e.preventDefault();
+    const input = document.getElementById('nombreColumna');
+    const nombre = input.value.trim();
+    
+    if (!nombre) return;
+    if (columnasPersonalizadas.includes(nombre)) {
+        alert('Esta columna ya existe');
+        return;
+    }
+    
+    columnasPersonalizadas.push(nombre);
+    input.value = '';
+    actualizarColumnas();
+}
+
+function eliminarColumna(nombre) {
+    if (!confirm(`¿Eliminar la columna "${nombre}"?`)) return;
+    columnasPersonalizadas = columnasPersonalizadas.filter(c => c !== nombre);
+    actualizarColumnas();
+}
+
+function actualizarColumnas() {
+    // Actualizar lista de columnas en el panel
+    const lista = document.getElementById('listaColumnas');
+    lista.innerHTML = columnasPersonalizadas.map(col => `
+        <div style="background: #e0e7ff; color: #3730a3; padding: 6px 12px; border-radius: 20px; font-size: 11px; display: flex; align-items: center; gap: 6px;">
+            <span>${col}</span>
+            <button onclick="eliminarColumna('${col}')" style="background: none; border: none; cursor: pointer; color: #3730a3; font-weight: bold; padding: 0; font-size: 14px;">&times;</button>
+        </div>
+    `).join('');
+    
+    // Actualizar indicador de columnas activas
+    const indicador = document.getElementById('columnasActivas');
+    if (columnasPersonalizadas.length > 0) {
+        indicador.textContent = `${columnasPersonalizadas.length} columna(s) personalizada(s) activa(s)`;
+    } else {
+        indicador.textContent = '';
+    }
+    
+    // Actualizar tabla
+    const tabla = document.getElementById('tablaReporte');
+    const mostrar = columnasPersonalizadas.length > 0;
+    
+    // Mostrar/ocultar headers
+    document.querySelectorAll('.columnas-extra-header').forEach(th => {
+        th.style.display = mostrar ? '' : 'none';
+        if (mostrar) {
+            th.setAttribute('colspan', columnasPersonalizadas.length);
+            th.innerHTML = columnasPersonalizadas.map(col => `<div style="display:inline-block; padding:0 8px; min-width:80px;">${col}</div>`).join('');
+        }
+    });
+    
+    // Actualizar celdas
+    document.querySelectorAll('.columnas-extra-cell').forEach(td => {
+        td.style.display = mostrar ? '' : 'none';
+        if (mostrar) {
+            td.setAttribute('colspan', columnasPersonalizadas.length);
+            td.innerHTML = columnasPersonalizadas.map(col => 
+                `<div contenteditable="true" style="display:inline-block; padding:2px 8px; min-width:80px; min-height:18px; border-right:1px solid #e5e5e5; outline:none;" 
+                      placeholder="Escribir aquí..."
+                      onfocus="this.style.background='#fffbeb'" 
+                      onblur="this.style.background=''"
+                ></div>`
+            ).join('');
+        }
+    });
+}
+
+// Inicializar
+actualizarColumnas();
+</script>
 
 </body>
 </html>

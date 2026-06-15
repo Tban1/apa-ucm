@@ -10,6 +10,7 @@ use App\Models\Facultad;
 use App\Models\Nomina;
 use App\Models\Periodo;
 use App\Models\PlazoFacultad;
+use App\Models\SemestreAcademico;
 use App\Models\Solicitud;
 use App\Models\User;
 use Carbon\Carbon;
@@ -48,6 +49,7 @@ class DemoSeeder extends Seeder
 
         $periodo = $this->crearPeriodoActivo($analista);
         $this->crearCronograma($periodo);
+        $this->crearSemestresAcademicos($periodo);
         $this->crearPlazoFacultad($periodo, $fci, $secretario);
 
         $academicos = $this->crearAcademicosFCI($academico, $fci);
@@ -56,6 +58,25 @@ class DemoSeeder extends Seeder
         $this->crearCompromisosDemo($periodo, $academicos);
 
         $this->seedFacultadFCAF($periodo);
+    }
+
+    /**
+     * Crea los semestres académicos S1 y S2 para el período activo.
+     * S1 cierra a la mitad del período, S2 al final del período.
+     */
+    private function crearSemestresAcademicos(Periodo $periodo): void
+    {
+        $inicio = Carbon::parse($periodo->fecha_inicio);
+
+        SemestreAcademico::firstOrCreate(
+            ['periodo_id' => $periodo->id, 'numero' => 1],
+            ['fecha_cierre' => $inicio->copy()->addDays(70)->toDateString()]
+        );
+
+        SemestreAcademico::firstOrCreate(
+            ['periodo_id' => $periodo->id, 'numero' => 2],
+            ['fecha_cierre' => $inicio->copy()->addDays(140)->toDateString()]
+        );
     }
 
     private function crearPeriodoActivo(User $analista): Periodo
@@ -174,15 +195,15 @@ class DemoSeeder extends Seeder
             ->first();
 
         if ($nominaFcaf) {
+            // Académico FCAF: solo declaró S1, debe declarar S2 cuando ingrese
             CompromisoApa::updateOrCreate(
-                ['nomina_id' => $nominaFcaf->id],
+                ['nomina_id' => $nominaFcaf->id, 'periodo_id' => $periodo->id, 'semestre' => 'S1'],
                 [
-                    'periodo_id'         => $periodo->id,
                     'pct_docencia'       => 45,
                     'pct_investigacion'  => 35,
                     'pct_extension'      => 10,
-                    'pct_administracion' => 5,
-                    'pct_otras'          => 5,
+                    'pct_administracion' => 10,
+                    'pct_otras'          => 0,
                     'fuente'             => 'manual',
                     'confirmado_en'      => now(),
                 ]
@@ -381,7 +402,11 @@ class DemoSeeder extends Seeder
         }
     }
 
-    /** Compromiso APA precargado solo para academico@ (ejemplo de académico que ya declaró). */
+    /**
+     * Compromisos APA precargados para academico@ (S1 y S2 ya declarados).
+     * Esto permite que el usuario pruebe directo el flujo de carga de evidencias
+     * sin tener que declarar compromisos primero.
+     */
     private function crearCompromisosDemo(Periodo $periodo, array $academicos): void
     {
         if (!isset($academicos[0])) {
@@ -396,15 +421,29 @@ class DemoSeeder extends Seeder
             return;
         }
 
+        // S1: confirmado
         CompromisoApa::updateOrCreate(
-            ['nomina_id' => $nomina->id],
+            ['nomina_id' => $nomina->id, 'periodo_id' => $periodo->id, 'semestre' => 'S1'],
             [
-                'periodo_id'         => $periodo->id,
                 'pct_docencia'       => 50,
                 'pct_investigacion'  => 25,
                 'pct_extension'      => 10,
+                'pct_administracion' => 15,
+                'pct_otras'          => 0,
+                'fuente'             => 'manual',
+                'confirmado_en'      => now(),
+            ]
+        );
+
+        // S2: confirmado
+        CompromisoApa::updateOrCreate(
+            ['nomina_id' => $nomina->id, 'periodo_id' => $periodo->id, 'semestre' => 'S2'],
+            [
+                'pct_docencia'       => 45,
+                'pct_investigacion'  => 30,
+                'pct_extension'      => 15,
                 'pct_administracion' => 10,
-                'pct_otras'          => 5,
+                'pct_otras'          => 0,
                 'fuente'             => 'manual',
                 'confirmado_en'      => now(),
             ]

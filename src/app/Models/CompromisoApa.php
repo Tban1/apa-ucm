@@ -19,18 +19,11 @@ class CompromisoApa extends Model
         'fuente', 'confirmado_en', 'modificado_por', 'modificado_en',
     ];
 
-    public static function semestresParaCategoria(?string $categoria): int
+    public static function labelSemestre(string $semestre): string
     {
-        return $categoria === 'auxiliar' ? 2 : 4;
-    }
-
-    public static function labelSemestre(string|int $semestre): string
-    {
-        return match ((string) $semestre) {
-            '1' => 'I Semestre',
-            '2' => 'II Semestre',
-            '3' => 'III Semestre',
-            '4' => 'IV Semestre',
+        return match ($semestre) {
+            'S1' => 'I Semestre',
+            'S2' => 'II Semestre',
             default => "Semestre {$semestre}",
         };
     }
