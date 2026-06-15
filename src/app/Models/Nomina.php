@@ -154,10 +154,11 @@ class Nomina extends Model
 
     public function tieneCompromisoApaConfirmado(): bool
     {
-        $categoria = $this->categoriaEfectiva();
-        $requeridos = CompromisoApa::semestresParaCategoria($categoria);
-        $confirmados = $this->compromisos()->whereNotNull('confirmado_en')->count();
-        return $confirmados >= $requeridos;
+        // Verificar si tiene ambos semestres confirmados
+        $tieneS1 = $this->compromisos()->where('semestre', 'S1')->whereNotNull('confirmado_en')->exists();
+        $tieneS2 = $this->compromisos()->where('semestre', 'S2')->whereNotNull('confirmado_en')->exists();
+        
+        return $tieneS1 && $tieneS2;
     }
 
     // ── Relaciones ───────────────────────────────────────────────────────

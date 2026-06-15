@@ -459,10 +459,7 @@ function PanelColumnas({ periodo, columnasAdicionales }) {
 }
 
 // ── Grilla de nómina ──────────────────────────────────────────────────────────
-function NominaGrid({ nominasEnPeriodo, periodo, columnasAdicionales,
-                      editingId, obsInput, setObsInput,
-                      savingId, setEditingId, onQuitarLicencia, onConfirmarLicencia,
-                      onEditar }) {
+function NominaGrid({ nominasEnPeriodo, periodo, columnasAdicionales, onEditar }) {
     if (nominasEnPeriodo.length === 0) {
         return (
             <div className="bg-white rounded-xl border border-dashed border-gray-300 p-10 text-center">
@@ -498,7 +495,6 @@ function NominaGrid({ nominasEnPeriodo, periodo, columnasAdicionales,
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                         {nominasEnPeriodo.map(n => {
-                            const isSaving = savingId === n.id;
                             return (
                                 <tr key={n.id} className="hover:bg-gray-50">
                                     <td className="px-3 py-2 text-gray-400">{n.numero_personal || '—'}</td>
@@ -546,23 +542,10 @@ function NominaGrid({ nominasEnPeriodo, periodo, columnasAdicionales,
                                     </td>
 
                                     <td className="px-3 py-2 whitespace-nowrap">
-                                        <div className="flex items-center gap-2">
-                                            <button onClick={() => onEditar(n)}
-                                                className="text-[10px] text-[#1B2D6B] hover:underline font-medium">
-                                                Editar
-                                            </button>
-                                            {n.con_licencia ? (
-                                                <button disabled={isSaving} onClick={() => onQuitarLicencia(n.id)}
-                                                    className="text-[10px] text-gray-400 hover:text-red-500 disabled:opacity-40">
-                                                    {isSaving ? '...' : 'Quitar caso'}
-                                                </button>
-                                            ) : (
-                                                <button onClick={() => setEditingId(n.id)}
-                                                    className="text-[10px] text-amber-600 hover:text-amber-800 font-medium">
-                                                    + Caso
-                                                </button>
-                                            )}
-                                        </div>
+                                        <button onClick={() => onEditar(n)}
+                                            className="text-[10px] text-[#1B2D6B] hover:underline font-medium">
+                                            Editar
+                                        </button>
                                     </td>
                                 </tr>
                             );
@@ -570,21 +553,6 @@ function NominaGrid({ nominasEnPeriodo, periodo, columnasAdicionales,
                     </tbody>
                 </table>
             </div>
-
-            {editingId && (
-                <div className="border-t border-amber-200 bg-amber-50 px-5 py-3 flex items-center gap-3">
-                    <span className="text-xs text-amber-700 font-medium whitespace-nowrap">Motivo:</span>
-                    <input type="text" value={obsInput} onChange={e => setObsInput(e.target.value)}
-                        placeholder="Ej: licencia médica, permiso especial..."
-                        className="flex-1 border border-amber-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-200"
-                        autoFocus />
-                    <button disabled={!obsInput.trim() || !!savingId} onClick={() => onConfirmarLicencia(editingId)}
-                        className="text-xs bg-amber-500 text-white px-3 py-1.5 rounded-lg hover:bg-amber-600 disabled:opacity-50 whitespace-nowrap">
-                        {savingId ? 'Guardando...' : 'Confirmar'}
-                    </button>
-                    <button onClick={() => setEditingId(null)} className="text-xs text-gray-400 hover:text-gray-600">Cancelar</button>
-                </div>
-            )}
         </div>
     );
 }
@@ -592,26 +560,8 @@ function NominaGrid({ nominasEnPeriodo, periodo, columnasAdicionales,
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function NominaCreate({ periodo, facultades, academicos, nominasEnPeriodo, columnas_adicionales }) {
     const { flash } = usePage().props;
-    const [editingId, setEditingId]         = useState(null);
-    const [obsInput, setObsInput]           = useState('');
-    const [savingId, setSavingId]           = useState(null);
     const [showModal, setShowModal]         = useState(false);
     const [editandoNomina, setEditandoNomina] = useState(null);
-
-    function confirmarLicencia(nominaId) {
-        setSavingId(nominaId);
-        router.patch(`/analista/nominas/${nominaId}/licencia`,
-            { con_licencia: true, observacion_licencia: obsInput },
-            { preserveScroll: true, onFinish: () => setSavingId(null), onSuccess: () => { setEditingId(null); setObsInput(''); } }
-        );
-    }
-    function quitarLicencia(nominaId) {
-        setSavingId(nominaId);
-        router.patch(`/analista/nominas/${nominaId}/licencia`,
-            { con_licencia: false, observacion_licencia: null },
-            { preserveScroll: true, onFinish: () => setSavingId(null) }
-        );
-    }
 
     const totalLicencias = nominasEnPeriodo.filter(n => n.con_licencia).length;
     const columnasAdicionales = columnas_adicionales ?? [];
@@ -638,11 +588,6 @@ export default function NominaCreate({ periodo, facultades, academicos, nominasE
                         <a href={`/analista/periodos/${periodo.id}/nominas/exportar`}
                             className="text-xs border border-gray-300 text-gray-600 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors">
                             ↓ Exportar Excel
-                        </a>
-                        <a href={`/analista/periodos/${periodo.id}/nominas/exportar?solo_excelentes=1`}
-                            title="Genera Excel con académicos de concepto Excelente (incentivos)"
-                            className="text-xs border border-amber-400 text-amber-700 hover:bg-amber-50 px-3 py-1.5 rounded-lg transition-colors">
-                            ↓ Exportar Excelentes
                         </a>
                         <button onClick={() => setShowModal(true)}
                             className="text-xs bg-[#1B2D6B] text-white px-3 py-1.5 rounded-lg hover:bg-[#152558] transition-colors">
@@ -675,7 +620,9 @@ export default function NominaCreate({ periodo, facultades, academicos, nominasE
                                 </div>
                                 {totalLicencias > 0 && (
                                     <div className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-500">Casos especiales</span>
+                                        <span className="text-sm text-gray-500" title="Académicos con licencia médica u otros casos especiales comunicados por secretarios">
+                                            Casos especiales
+                                        </span>
                                         <span className="text-sm font-semibold text-amber-600">{totalLicencias}</span>
                                     </div>
                                 )}
@@ -696,13 +643,6 @@ export default function NominaCreate({ periodo, facultades, academicos, nominasE
                             nominasEnPeriodo={nominasEnPeriodo}
                             periodo={periodo}
                             columnasAdicionales={columnasAdicionales}
-                            editingId={editingId}
-                            obsInput={obsInput}
-                            setObsInput={setObsInput}
-                            savingId={savingId}
-                            setEditingId={setEditingId}
-                            onQuitarLicencia={quitarLicencia}
-                            onConfirmarLicencia={confirmarLicencia}
                             onEditar={setEditandoNomina}
                         />
                     </div>

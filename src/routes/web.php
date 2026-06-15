@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AnalistaCCDAController;
 use App\Http\Controllers\ApelacionController;
 use App\Http\Controllers\AuthController;
@@ -33,6 +34,8 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'admin'])->name('admin.dashboard');
+        Route::get('/configuracion-semestres', [AdminController::class, 'configuracionSemestres'])->name('admin.configuracion-semestres');
+        Route::post('/configuracion-semestres', [AdminController::class, 'storeSemestres'])->name('admin.configuracion-semestres.store');
     });
 
     Route::middleware('role:analista_ccda')->prefix('analista')->group(function () {
@@ -53,8 +56,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/periodos/{periodo}/nominas/{nomina}/detalle',[NominaController::class, 'detalle'])->name('analista.periodos.nominas.detalle');
         Route::get('/nominas/plantilla',                          [NominaController::class, 'plantilla'])->name('analista.nominas.plantilla');
         Route::get('/periodos/{periodo}/cronograma/pdf',          [PeriodoController::class, 'imprimirCronograma'])->name('analista.periodos.cronograma.pdf');
-
-        Route::patch('/nominas/{nomina}/licencia', [NominaController::class, 'toggleLicencia'])->name('analista.nominas.licencia');
 
         Route::get('/estado-proceso',         [AnalistaCCDAController::class, 'estadoProceso'])->name('analista.estado-proceso');
         Route::get('/reporte-calificaciones', [AnalistaCCDAController::class, 'reporteCalificaciones'])->name('analista.reporte-calificaciones');
@@ -119,11 +120,11 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware(['role:academico', 'academico.no_licencia'])->prefix('academico')->group(function () {
-        Route::get('/declaracion-apa',  [CompromisoApaController::class, 'showDeclaracion'])->name('academico.declaracion-apa');
+        Route::get('/declaracion-apa/{semestre?}',  [CompromisoApaController::class, 'showDeclaracion'])->name('academico.declaracion-apa');
         Route::post('/declaracion-apa', [CompromisoApaController::class, 'storeDeclaracion'])->name('academico.declaracion-apa.store');
     });
 
-    Route::middleware(['role:academico', 'academico.no_licencia', 'compromiso.apa'])->prefix('academico')->group(function () {
+    Route::middleware(['role:academico', 'academico.no_licencia', 'declaracion.apa'])->prefix('academico')->group(function () {
         Route::get('/dashboard',                                   [DashboardController::class, 'academico'])->name('academico.dashboard');
         Route::get('/evidencias',                                  [EvidenciaController::class, 'index'])->name('academico.evidencias');
         Route::post('/evidencias',                                 [EvidenciaController::class, 'store'])->name('academico.evidencias.store');

@@ -28,6 +28,12 @@ class Periodo extends Model
     public function estaActivo(): bool   { return $this->estado === 'activo'; }
     public function estaCerrado(): bool  { return $this->estado === 'cerrado'; }
 
+    // ── Scopes ───────────────────────────────────────────────────────────
+    public function scopeActivo($query)
+    {
+        return $query->where('estado', 'activo')->latest();
+    }
+
     // ── Relaciones ───────────────────────────────────────────────────────
     public function creadoPor(): BelongsTo
     {
@@ -47,6 +53,11 @@ class Periodo extends Model
     public function actas(): HasMany
     {
         return $this->hasMany(Acta::class);
+    }
+
+    public function semestres(): HasMany
+    {
+        return $this->hasMany(SemestreAcademico::class);
     }
 
     // ── Scopes ───────────────────────────────────────────────────────────
