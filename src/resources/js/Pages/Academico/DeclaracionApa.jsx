@@ -2,29 +2,74 @@ import { Head, useForm, usePage } from '@inertiajs/react';
 import { useMemo } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 
-const CAMPOS = [
-    { key: 'pct_docencia',       label: 'Actividades de Docencia' },
-    { key: 'pct_investigacion',  label: 'Actividades de Investigación' },
-    { key: 'pct_extension',      label: 'Extensión y Vinculación' },
-    { key: 'pct_administracion', label: 'Administración Académica' },
+const AREAS = [
+    { hrsKey: 'hrs_docencia',       pctKey: 'pct_docencia',       label: 'Actividades de Docencia' },
+    { hrsKey: 'hrs_investigacion',  pctKey: 'pct_investigacion',  label: 'Actividades de Investigación' },
+    { hrsKey: 'hrs_extension',      pctKey: 'pct_extension',      label: 'Extensión y Vinculación' },
+    { hrsKey: 'hrs_administracion', pctKey: 'pct_administracion', label: 'Administración Académica' },
 ];
 
-export default function DeclaracionApa({ periodo, nomina, semestre, semestreLabel, yaDeclarado, fechaCierre, datos }) {
-    const { flash } = usePage().props;
+/**
+ * Normaliza horas → porcentajes (suma = 100).
+ * Áreas sin horas reciben 0%. El ajuste de redondeo va al último área con horas.
+ */
+function calcularPorcentajes(horas, decimales = 2) {
+    const factor    = Math.pow(10, decimales);
+    const totalHrs  = AREAS.reduce((acc, a) => acc + (parseFloat(horas[a.hrsKey]) || 0), 0);
+
+    if (totalHrs <= 0) {
+        return Object.fromEntries(AREAS.map(a => [a.pctKey, 0]));
+    }
+
+    const areasConHrs = AREAS.filter(a => (parseFloat(horas[a.hrsKey]) || 0) > 0);
+    const pcts = {};
+    let sumaAcum = 0;
+
+    for (const area of AREAS) {
+        const hrs = parseFloat(horas[area.hrsKey]) || 0;
+        if (hrs <= 0) {
+            pcts[area.pctKey] = 0;
+        } else {
+            const pct = Math.round((hrs / totalHrs) * 100 * factor) / factor;
+            pcts[area.pctKey] = pct;
+            sumaAcum += pct;
+        }
+    }
+
+    if (areasConHrs.length > 0) {
+        const lastKey = areasConHrs[areasConHrs.length - 1].pctKey;
+        pcts[lastKey] = Math.round((100 - (sumaAcum - pcts[lastKey])) * factor) / factor;
+    }
+
+    return pcts;
+}
+
+export default function DeclaracionApa({
+    periodo, nomina, semestre, semestreLabel, yaDeclarado, fechaCierre, datos, config,
+}) {
+    const { flash }  = usePage().props;
+    const decimales  = config?.decimales_pct      ?? 2;
+    const horasBase  = config?.horas_semestre_base ?? 40;
 
     const form = useForm({
-        semestre:           semestre,
-        pct_docencia:       datos?.pct_docencia ?? '',
-        pct_investigacion:  datos?.pct_investigacion ?? '',
-        pct_extension:      datos?.pct_extension ?? '',
-        pct_administracion: datos?.pct_administracion ?? '',
+        semestre,
+        hrs_docencia:       datos?.hrs_docencia       ?? '',
+        hrs_investigacion:  datos?.hrs_investigacion  ?? '',
+        hrs_extension:      datos?.hrs_extension      ?? '',
+        hrs_administracion: datos?.hrs_administracion ?? '',
+        hrs_otras:          datos?.hrs_otras          ?? '',
     });
 
-    const total = useMemo(() => {
-        return CAMPOS.reduce((acc, c) => acc + (parseFloat(form.data[c.key]) || 0), 0);
-    }, [form.data]);
+    const { pcts, totalHras } = useMemo(() => {
+        const total = AREAS.reduce((acc, a) => acc + (parseFloat(form.data[a.hrsKey]) || 0), 0);
+        return {
+            pcts:      calcularPorcentajes(form.data, decimales),
+            totalHras: total,
+        };
+    }, [form.data, decimales]);
 
-    const totalOk = Math.abs(total - 100) < 0.01 && total > 0;
+    const tieneHoras         = totalHras > 0;
+    const mostrarAdvertencia = tieneHoras && Math.abs(totalHras - horasBase) > 0.01;
 
     function submit(e) {
         e.preventDefault();
@@ -77,7 +122,7 @@ export default function DeclaracionApa({ periodo, nomina, semestre, semestreLabe
                             {semestreLabel}
                         </h2>
                         <p className="text-sm text-gray-500 mt-1">
-                            Ingresa el porcentaje de tiempo para cada área según lo acordado con tu director de departamento.
+                            Ingresa las horas dedicadas a cada área. El porcentaje se calcula automáticamente.
                         </p>
 
                         {yaDeclarado ? (
@@ -86,37 +131,87 @@ export default function DeclaracionApa({ periodo, nomina, semestre, semestreLabe
                             </div>
                         ) : (
                             <form onSubmit={submit} className="mt-6 space-y-4">
-                                {CAMPOS.map(c => (
-                                    <div key={c.key}>
+
+                                {/* ── Áreas del 100% ─────────────────────────── */}
+                                {AREAS.map(a => (
+                                    <div key={a.hrsKey}>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            {c.label}
+                                            {a.label}
                                         </label>
                                         <div className="flex items-center gap-2">
                                             <input
                                                 type="number"
                                                 min={0}
-                                                max={100}
-                                                step={0.01}
-                                                value={form.data[c.key]}
-                                                onChange={e => form.setData(c.key, e.target.value)}
-                                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2D6B]/30"
+                                                step={0.5}
+                                                value={form.data[a.hrsKey]}
+                                                onChange={e => form.setData(a.hrsKey, e.target.value)}
+                                                placeholder="0"
                                                 disabled={form.processing}
+                                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2D6B]/30"
                                             />
-                                            <span className="text-sm text-gray-400 shrink-0">%</span>
+                                            <span className="text-sm text-gray-400 shrink-0">h</span>
+                                            <span className={`text-sm font-semibold shrink-0 w-16 text-right tabular-nums ${
+                                                tieneHoras ? 'text-[#1B2D6B]' : 'text-gray-300'
+                                            }`}>
+                                                {tieneHoras ? `${pcts[a.pctKey].toFixed(decimales)}%` : '—%'}
+                                            </span>
                                         </div>
-                                        {form.errors[c.key] && (
-                                            <p className="text-xs text-red-600 mt-1">{form.errors[c.key]}</p>
+                                        {form.errors[a.hrsKey] && (
+                                            <p className="text-xs text-red-600 mt-1">{form.errors[a.hrsKey]}</p>
                                         )}
                                     </div>
                                 ))}
 
-                                <div className={`rounded-lg px-4 py-3 text-sm font-medium ${
-                                    totalOk ? 'bg-green-50 text-green-800 border border-green-200'
-                                            : 'bg-red-50 text-red-700 border border-red-200'
+                                {/* ── Resumen total ───────────────────────────── */}
+                                <div className={`rounded-lg px-4 py-3 text-sm ${
+                                    tieneHoras
+                                        ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                                        : 'bg-gray-50 text-gray-400 border border-gray-200'
                                 }`}>
-                                    Total: {total.toFixed(2)}%
-                                    {!totalOk && total > 0 && (
-                                        <span className="block text-xs font-normal mt-0.5">Debe sumar exactamente 100%</span>
+                                    <div className="flex justify-between font-medium">
+                                        <span>Total horas declaradas</span>
+                                        <span className="tabular-nums">{totalHras.toFixed(1)} h</span>
+                                    </div>
+                                    {tieneHoras && (
+                                        <p className="text-xs mt-0.5 opacity-70">
+                                            Los porcentajes suman 100% y se calculan automáticamente.
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* ── Advertencia de coherencia (no bloquea) ─── */}
+                                {mostrarAdvertencia && (
+                                    <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+                                        Las horas declaradas ({totalHras.toFixed(1)} h) difieren de la base
+                                        esperada ({horasBase} h/semestre). Verifique con su director de departamento
+                                        antes de confirmar.
+                                    </div>
+                                )}
+
+                                {/* ── Otras actividades (fuera del 100%) ──────── */}
+                                <div className="border-t border-gray-100 pt-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Otras actividades
+                                        <span className="ml-2 font-normal text-xs text-gray-400">
+                                            (fuera del 100% · validado por CCDA)
+                                        </span>
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            step={0.5}
+                                            value={form.data.hrs_otras}
+                                            onChange={e => form.setData('hrs_otras', e.target.value)}
+                                            placeholder="0"
+                                            disabled={form.processing}
+                                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2D6B]/30"
+                                        />
+                                        <span className="text-sm text-gray-400 shrink-0">h</span>
+                                        <span className="shrink-0 w-16" />
+                                    </div>
+                                    {form.errors.hrs_otras && (
+                                        <p className="text-xs text-red-600 mt-1">{form.errors.hrs_otras}</p>
                                     )}
                                 </div>
 
@@ -126,7 +221,7 @@ export default function DeclaracionApa({ periodo, nomina, semestre, semestreLabe
 
                                 <button
                                     type="submit"
-                                    disabled={form.processing || !totalOk}
+                                    disabled={form.processing || !tieneHoras}
                                     className="w-full bg-[#1B2D6B] text-white text-sm font-medium py-2.5 rounded-lg hover:bg-[#152558] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
                                     {form.processing ? 'Confirmando...' : `Confirmar ${semestreLabel}`}

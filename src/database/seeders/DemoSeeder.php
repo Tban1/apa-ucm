@@ -195,10 +195,15 @@ class DemoSeeder extends Seeder
             ->first();
 
         if ($nominaFcaf) {
-            // Académico FCAF: solo declaró S1, debe declarar S2 cuando ingrese
+            // Académico FCAF: solo declaró S1; debe declarar S2 cuando cierre el primero.
             CompromisoApa::updateOrCreate(
                 ['nomina_id' => $nominaFcaf->id, 'periodo_id' => $periodo->id, 'semestre' => 'S1'],
                 [
+                    'hrs_docencia'       => 18,
+                    'hrs_investigacion'  => 14,
+                    'hrs_extension'      => 4,
+                    'hrs_administracion' => 4,
+                    'hrs_otras'          => 0,
                     'pct_docencia'       => 45,
                     'pct_investigacion'  => 35,
                     'pct_extension'      => 10,
@@ -421,24 +426,33 @@ class DemoSeeder extends Seeder
             return;
         }
 
-        // S1: confirmado
+        // S1 y S2 confirmados — el académico FCI ya puede cargar evidencias.
         CompromisoApa::updateOrCreate(
             ['nomina_id' => $nomina->id, 'periodo_id' => $periodo->id, 'semestre' => 'S1'],
             [
+                'hrs_docencia'       => 20,
+                'hrs_investigacion'  => 10,
+                'hrs_extension'      => 6,
+                'hrs_administracion' => 4,
+                'hrs_otras'          => 0,
                 'pct_docencia'       => 50,
                 'pct_investigacion'  => 25,
-                'pct_extension'      => 10,
-                'pct_administracion' => 15,
+                'pct_extension'      => 15,
+                'pct_administracion' => 10,
                 'pct_otras'          => 0,
                 'fuente'             => 'manual',
                 'confirmado_en'      => now(),
             ]
         );
 
-        // S2: confirmado
         CompromisoApa::updateOrCreate(
             ['nomina_id' => $nomina->id, 'periodo_id' => $periodo->id, 'semestre' => 'S2'],
             [
+                'hrs_docencia'       => 18,
+                'hrs_investigacion'  => 12,
+                'hrs_extension'      => 6,
+                'hrs_administracion' => 4,
+                'hrs_otras'          => 0,
                 'pct_docencia'       => 45,
                 'pct_investigacion'  => 30,
                 'pct_extension'      => 15,

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CompromisoApa;
+use App\Models\ConfiguracionApa;
 use App\Models\Nomina;
 use App\Models\Periodo;
 use Illuminate\Http\Request;
@@ -14,7 +15,6 @@ class CompromisoApaController extends Controller
 {
     public function showDeclaracion(string $semestre = 'S1'): Response
     {
-        // 1. Validar que semestre es 'S1' o 'S2'
         if (!in_array($semestre, ['S1', 'S2'])) {
             abort(404);
         }
@@ -24,13 +24,14 @@ class CompromisoApaController extends Controller
 
         if (!$periodo) {
             return Inertia::render('Academico/DeclaracionApa', [
-                'periodo'         => null,
-                'nomina'          => null,
-                'semestre'        => $semestre,
-                'semestreLabel'   => CompromisoApa::labelSemestre($semestre),
-                'yaDeclarado'     => false,
-                'fechaCierre'     => null,
-                'datos'           => null,
+                'periodo'       => null,
+                'nomina'        => null,
+                'semestre'      => $semestre,
+                'semestreLabel' => CompromisoApa::labelSemestre($semestre),
+                'yaDeclarado'   => false,
+                'fechaCierre'   => null,
+                'datos'         => null,
+                'config'        => $this->configVista(),
             ]);
         }
 
@@ -48,11 +49,9 @@ class CompromisoApaController extends Controller
                 ->with('error', 'El plazo de carga de evidencias no está vigente.');
         }
 
-        // 2. Obtener datos del semestre
         $semestres = $periodo->semestres;
         $semestreData = $semestres->firstWhere('numero', $semestre === 'S1' ? 1 : 2);
 
-        // 3. Verificar si el semestre está disponible para declarar
         if ($semestre === 'S2') {
             $cierreS1 = $semestres->firstWhere('numero', 1)?->fecha_cierre;
             if (!$cierreS1 || !today()->isAfter($cierreS1)) {
@@ -61,7 +60,6 @@ class CompromisoApaController extends Controller
             }
         }
 
-        // 4. Verificar si ya declaró este semestre
         $compromisoExistente = CompromisoApa::where('nomina_id', $nomina->id)
             ->where('semestre', $semestre)
             ->first();
@@ -73,12 +71,15 @@ class CompromisoApaController extends Controller
             'semestreLabel' => CompromisoApa::labelSemestre($semestre),
             'yaDeclarado'   => $compromisoExistente && $compromisoExistente->estaConfirmado(),
             'fechaCierre'   => $semestreData?->fecha_cierre?->format('d/m/Y'),
-            'datos'         => $compromisoExistente ? [
-                'pct_docencia'       => (float) $compromisoExistente->pct_docencia,
-                'pct_investigacion'  => (float) $compromisoExistente->pct_investigacion,
-                'pct_extension'      => (float) $compromisoExistente->pct_extension,
-                'pct_administracion' => (float) $compromisoExistente->pct_administracion,
+            // datos: hrs_* para pre-rellenar el form si el compromiso existe pero no está confirmado
+            'datos'         => $compromisoExistente && !$compromisoExistente->estaConfirmado() ? [
+                'hrs_docencia'       => (float) ($compromisoExistente->hrs_docencia       ?? 0),
+                'hrs_investigacion'  => (float) ($compromisoExistente->hrs_investigacion  ?? 0),
+                'hrs_extension'      => (float) ($compromisoExistente->hrs_extension      ?? 0),
+                'hrs_administracion' => (float) ($compromisoExistente->hrs_administracion ?? 0),
+                'hrs_otras'          => (float) ($compromisoExistente->hrs_otras          ?? 0),
             ] : null,
+            'config'        => $this->configVista(),
         ]);
     }
 
@@ -101,53 +102,29 @@ class CompromisoApaController extends Controller
                 ->with('error', 'El plazo de carga de evidencias no está vigente.');
         }
 
-        // 1. Validar semestre y porcentajes
         $validated = $request->validate([
-            'semestre'           => ['required', 'in:S1,S2'],
-            'pct_docencia'       => ['required', 'numeric', 'min:0', 'max:100'],
-            'pct_investigacion'  => ['required', 'numeric', 'min:0', 'max:100'],
-            'pct_extension'      => ['required', 'numeric', 'min:0', 'max:100'],
-            'pct_administracion' => ['required', 'numeric', 'min:0', 'max:100'],
+            'semestre' => ['required', 'in:S1,S2'],
         ]);
 
         $semestre = $validated['semestre'];
 
-        // Verificar que este semestre no está ya confirmado
         $existente = $nomina->compromisos->firstWhere('semestre', $semestre);
         if ($existente?->estaConfirmado()) {
             return back()->with('error', 'Este semestre ya fue confirmado.');
         }
 
-        // 2. Validar que suma sea 100
-        $suma = (float) $validated['pct_docencia'] 
-              + (float) $validated['pct_investigacion']
-              + (float) $validated['pct_extension'] 
-              + (float) $validated['pct_administracion'];
+        $data = $this->validarHorasYCalcularPct($request);
 
-        if (abs($suma - 100) > 0.01) {
-            throw ValidationException::withMessages([
-                'pct_docencia' => "Los porcentajes deben sumar exactamente 100% (actual: {$suma}%).",
-            ]);
-        }
-
-        // 3. Guardar compromiso
         CompromisoApa::updateOrCreate(
-            ['nomina_id' => $nomina->id, 'semestre' => $semestre],
-            [
-                'periodo_id'         => $periodo->id,
-                'pct_docencia'       => round((float) $validated['pct_docencia'], 2),
-                'pct_investigacion'  => round((float) $validated['pct_investigacion'], 2),
-                'pct_extension'      => round((float) $validated['pct_extension'], 2),
-                'pct_administracion' => round((float) $validated['pct_administracion'], 2),
-                'pct_otras'          => 0,
-                'fuente'             => 'manual',
-                'confirmado_en'      => now(),
-                'modificado_por'     => null,
-                'modificado_en'      => null,
-            ]
+            ['nomina_id' => $nomina->id, 'periodo_id' => $periodo->id, 'semestre' => $semestre],
+            array_merge($data, [
+                'fuente'         => 'manual',
+                'confirmado_en'  => now(),
+                'modificado_por' => null,
+                'modificado_en'  => null,
+            ])
         );
 
-        // 4. Redirigir según el caso
         if ($semestre === 'S1') {
             return redirect()->route('academico.dashboard')
                 ->with('success', 'I Semestre confirmado. Podrás declarar el II Semestre cuando cierre el primero.');
@@ -157,4 +134,63 @@ class CompromisoApaController extends Controller
             ->with('success', 'II Semestre confirmado. Ya puedes cargar evidencias.');
     }
 
+    /**
+     * Valida horas ingresadas y calcula los porcentajes correspondientes.
+     * Persiste AMBOS valores (horas crudas + porcentaje calculado) para trazabilidad.
+     *
+     * @return array<string, float>
+     */
+    private function validarHorasYCalcularPct(Request $request): array
+    {
+        $decimales = (int) ConfiguracionApa::get('decimales_pct', 2);
+
+        $data = $request->validate([
+            'hrs_docencia'       => ['required', 'numeric', 'min:0', 'max:9999'],
+            'hrs_investigacion'  => ['required', 'numeric', 'min:0', 'max:9999'],
+            'hrs_extension'      => ['required', 'numeric', 'min:0', 'max:9999'],
+            'hrs_administracion' => ['required', 'numeric', 'min:0', 'max:9999'],
+            // "Otras actividades" va fuera del 100%; lo valida el CCDA, no el académico.
+            'hrs_otras'          => ['nullable', 'numeric', 'min:0', 'max:9999'],
+        ]);
+
+        $totalHrs = (float) $data['hrs_docencia'] + (float) $data['hrs_investigacion']
+                  + (float) $data['hrs_extension'] + (float) $data['hrs_administracion'];
+
+        if ($totalHrs <= 0) {
+            throw ValidationException::withMessages([
+                'hrs_docencia' => 'Debe ingresar horas en al menos un área.',
+            ]);
+        }
+
+        $pcts = CompromisoApa::calcularPorcentajesDesdeHoras([
+            'docencia'       => (float) $data['hrs_docencia'],
+            'investigacion'  => (float) $data['hrs_investigacion'],
+            'extension'      => (float) $data['hrs_extension'],
+            'administracion' => (float) $data['hrs_administracion'],
+        ], $decimales);
+
+        return [
+            // Horas crudas (trazabilidad / auditoría)
+            'hrs_docencia'       => round((float) $data['hrs_docencia'],       2),
+            'hrs_investigacion'  => round((float) $data['hrs_investigacion'],  2),
+            'hrs_extension'      => round((float) $data['hrs_extension'],      2),
+            'hrs_administracion' => round((float) $data['hrs_administracion'], 2),
+            'hrs_otras'          => round((float) ($data['hrs_otras'] ?? 0),   2),
+            // Porcentajes calculados (alimentan la fórmula de nota)
+            'pct_docencia'       => $pcts['pct_docencia'],
+            'pct_investigacion'  => $pcts['pct_investigacion'],
+            'pct_extension'      => $pcts['pct_extension'],
+            'pct_administracion' => $pcts['pct_administracion'],
+            'pct_otras'          => 0,
+        ];
+    }
+
+    /** @return array{horas_semestre_base: float, decimales_pct: int} */
+    private function configVista(): array
+    {
+        return [
+            'horas_semestre_base' => (float) ConfiguracionApa::get('horas_semestre_base', 40),
+            'decimales_pct'       => (int)   ConfiguracionApa::get('decimales_pct', 2),
+        ];
+    }
 }
